@@ -1,0 +1,10 @@
+*
+!**/
+
+# not ignore c/cpp files
+!**/*.cpp
+!**/*.hpp
+!**/*.cc
+!**/*.hh
+!**/*.c
+!**/*.h
