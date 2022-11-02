@@ -4,14 +4,19 @@
 #include "action.h"
 #include "map.h"
 #include <vector>
+#include <chrono>
+
+#define DEBUG 1
 
 class Logic {
-	float unit_buy_goal_funciton();
-	
-public:
-	Map map;
+	void reset();
 
-	std::vector<Action> get_next_actions();
+public:
+	Infos& infos{ Infos::get_instance() };
+	Map map;
+	std::vector<std::pair<int, int>> units;
+
+	std::vector<std::string> get_next_actions(std::chrono::steady_clock::time_point start);
 	void init();
 };
 

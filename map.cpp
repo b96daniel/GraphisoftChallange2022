@@ -1,4 +1,7 @@
 #include "map.h"
+#include <algorithm>
+
+// TODO: Timer started from solver -> Early return in get next actions
 
 int Field::get_type_from_str(std::string& type_str) {
     if (type_str == "EMPTY") return EMPTY;
@@ -29,32 +32,45 @@ void Map::init() {
     fields = std::vector(2 * infos.radius + 1, std::vector(2 * infos.radius + 1, Field()));
     for (int i = 0; i < static_cast<int>(fields.size()); ++i) {
         for (int j = 0; j < static_cast<int>(fields.size()); ++j) {
-            fields[i][j].pos = {i - offset, j - offset};
+            fields[i][j].pos = {i - infos.radius, j - infos.radius };
         }
     }
+}
 
-    offset = infos.radius;
+void Map::reset() {
+    own_fields.clear();
+    neighbouring_fields.clear();
 }
 
 void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water) {
-    Field& current_field = fields[pos.first + offset][pos.second + offset];
+    Field& current_field = fields[pos.first + infos.radius][pos.second + infos.radius];
 
     current_field.water = water;
-    if (current_field.water) return;
-
     current_field.value = value;
-    
-    if (current_field.owner != owner) {
-        if (owner == infos.id) own_fields.push_back(current_field);
-        // TODO: Check remove
-        else if (current_field.owner == infos.id)
-            own_fields.erase(std::find_if(own_fields.begin(),
-                own_fields.end(),
-                [&current_field](std::reference_wrapper<Field> f) { return f.get() == current_field; }));
-
-        current_field.owner = owner;
-    }
-
+    current_field.owner = owner;
     int current_type = Field::get_type_from_str(type_str);
     current_field.type = current_type;
+
+    if (owner == infos.id) own_fields.push_back(current_field.pos);
+}
+
+Field& Map::get_field(std::pair<int, int> pos) {
+    return fields[pos.first + infos.radius][pos.second + infos.radius];
+}
+
+void Map::iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func) {
+    int q = pos.first;
+    int r = pos.second;
+
+    // TODO: Can be restructured
+    if (q - 1 >= -infos.radius - std::min(0, r)) func({ q - 1, r});
+    if (q + 1 <= infos.radius - std::max(0, r)) func({ q + 1, r});
+    if (r - 1 >= -infos.radius - std::min(0, q)) func({ q, r - 1});
+    if (r + 1 <= infos.radius - std::max(0, q)) func({ q, r + 1});
+
+    if (q - 1 >= -infos.radius - std::min(0, r) &&
+        r + 1 <= infos.radius - std::max(0, q)) func({ q - 1, r + 1});
+       
+    if (q + 1 <= infos.radius - std::max(0, r) &&
+        r - 1 >= -infos.radius - std::min(0, q)) func({ q + 1, r - 1});
 }

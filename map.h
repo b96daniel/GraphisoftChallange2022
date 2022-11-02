@@ -7,6 +7,7 @@
 #include <string>
 #include <functional>
 #include <iostream>
+#include <set>
 
 class Field {
 public:
@@ -39,14 +40,16 @@ public:
 
 class Map {
     Infos& infos{ Infos::get_instance() };
-    int offset{ 0 };
-    int id{ 0 };
-    std::vector<std::vector<Field>> fields;
-
+    
 public:
-    std::vector<std::reference_wrapper<Field>> own_fields;
+    std::vector<std::vector<Field>> fields;
+    std::vector<std::pair<int, int>> own_fields;
+    std::set<std::pair<int, int>> neighbouring_fields;
     void init();
     void set_field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water);
+    void reset();
+    void iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func);
+    Field& get_field(std::pair<int, int> pos);
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 
 inline int solver::get_next_int(std::stringstream& ss, std::string& substring) {
 	ss >> substring;
@@ -38,6 +39,7 @@ void solver::startMessage(const std::vector<std::string>& start_infos) {
 }
 
 std::vector<std::string> solver::processTick(const std::vector<std::string>& infos) {
+	auto tick_start = std::chrono::steady_clock::now();
 	std::vector<std::string> commands{infos[0]};
 	commands[0][2] = 'S';
 
@@ -94,7 +96,8 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 		ss.clear();
 	}
 
-	logic.get_next_actions();
-
+	for (auto& action : logic.get_next_actions(tick_start)) {
+		commands.push_back(action);
+	}
 	return commands;
 }
