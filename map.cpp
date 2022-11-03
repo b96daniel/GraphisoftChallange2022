@@ -29,7 +29,7 @@ bool Field::operator==(const Field& f) {
 }
 
 void Map::init() {
-    fields = std::vector(2 * infos.radius + 1, std::vector(2 * infos.radius + 1, Field()));
+    fields = std::vector<std::vector<Field>>(2 * infos.radius + 1, std::vector<Field>(2 * infos.radius + 1, Field()));
     for (int i = 0; i < static_cast<int>(fields.size()); ++i) {
         for (int j = 0; j < static_cast<int>(fields.size()); ++j) {
             fields[i][j].pos = {i - infos.radius, j - infos.radius };

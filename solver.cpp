@@ -85,6 +85,7 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 				ss >> substring;
 
 				logic.map.set_field({q, r}, value, owner, substring, is_water);
+				logic.gold = gold;
 			}
 		}
 		else if (substring == "END") {

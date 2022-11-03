@@ -4,6 +4,7 @@
 // TODO: Add time check
 std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time_point start) {
 	std::vector<std::string> result;
+	calc_income();
 	for (const auto& pos: map.own_fields) {
 		map.iterate_neighbours(pos, [this](std::pair<int, int> n_pos) {
 			Field& current_field = map.get_field(n_pos);
@@ -40,6 +41,54 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 
 	reset();
 	return result;
+}
+
+void Logic::calc_income()
+{
+	income = 0;
+	for (const auto& pos : map.own_fields) {
+		Field& curr_field = map.get_field(pos);
+		switch (curr_field.type) {
+		case Field::EMPTY:
+			income += curr_field.value;
+			break;
+		case Field::PINE:
+			income += curr_field.value - 1;			
+			break;
+		case Field::PALM:
+			income += curr_field.value - 1;
+			break;
+		case Field::CASTLE:
+			income += curr_field.value;
+			break;
+		case Field::FARM:
+			income += curr_field.value + 4;
+			break;
+		case Field::TOWER:
+			income += curr_field.value - 1;
+			break;
+		case Field::FORT:
+			income += curr_field.value - 6;
+			break;
+		case Field::PEASANT:
+			income += curr_field.value - 2;
+			break;
+		case Field::SPEARMAN:
+			income += curr_field.value - 6;
+			break;
+		case Field::SWORDSMAN:
+			income += curr_field.value - 18;
+			break;
+		case Field::KNIGHT:
+			income += curr_field.value - 36;
+			break;
+		case Field::GRAVE:
+			income += curr_field.value;
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void Logic::reset() {
