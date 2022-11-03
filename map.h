@@ -35,10 +35,11 @@ public:
     static int get_type_from_str(std::string& type_str);
     static int get_income(int type);
     static int get_defense(int type);
+    static int get_merged_type(int add_type, int base_type);
     Field() = default;
     Field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water = false);
     bool operator==(const Field& f);
-    
+
 };
 
 class Map {
@@ -52,6 +53,8 @@ public:
     std::vector<std::pair<int, int>> farms;
     std::vector<std::vector<int>> threat_levels;
     std::set<std::pair<int, int>> neighbouring_fields;
+    std::vector<std::pair<int, int>> units;
+    int get_cost(int field_type);
     void init();
     void set_field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water);
     void process_loss(std::pair<int, int> pos);
@@ -59,6 +62,7 @@ public:
     void iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func);
     Field& get_field(std::pair<int, int> pos);
     int& get_threat(std::pair<int, int> pos);
+    int get_defense(std::pair<int, int> pos);
 };
 
 #endif

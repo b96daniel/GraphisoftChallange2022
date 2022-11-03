@@ -21,6 +21,7 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 		Move best_move;
 		
 		check_farm_buy(best_buy);
+		check_unit_buy(best_buy);
 
 		if (best_buy.value > best_move.value) {
 			result.push_back(best_buy.str());
@@ -64,7 +65,7 @@ void Logic::check_farm_buy(Buy& result) {
 				current.value = 0;
 
 				// Economic effect
-				current.value += get_economic_value(pos, -cost ,Field::get_income(Field::FARM));
+				current.value += get_economic_value(pos, -cost , Field::get_income(Field::FARM));
 
 				// Safety value
 				current.value += get_threat_value(pos, Field::get_defense(Field::FARM));
@@ -72,6 +73,52 @@ void Logic::check_farm_buy(Buy& result) {
 				if (current.value > result.value) result = current;
 			}
 		}
+	}
+}
+
+void Logic::check_unit_buy(Buy& result) {
+	for (int type = Field::PEASANT; type <= Field::KNIGHT; ++type) {
+		int cost = map.get_cost(type);
+		if (infos.gold >= cost) {
+			Buy current;
+			current.type = Buy::PEASANT + (type - Field::PEASANT);
+
+			for (const auto& pos : map.own_fields) {
+				Field& current_field = map.get_field(pos);
+				if (!(current_field.type >= Field::CASTLE && current_field.type <= Field::FORT)) {
+					if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT &&
+						Field::get_merged_type(type, current_field.type) == -1)
+							continue;
+					
+					current.pos = pos;
+					current.value = 0;
+					int current_type = type;
+
+					int income = Field::get_income(current_type);
+					if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
+						current_type = Field::get_merged_type(type, current_field.type);
+						income = Field::get_income(current_type) - Field::get_income(current_field.type);
+					}
+
+					// Economic effect
+					current.value += get_economic_value(pos, -cost, income);
+
+					// Safety value
+					current.value += get_threat_value(pos, Field::get_defense(current_type));
+
+					// Defense value
+					current.value += get_defense_value(pos, Field::get_defense(current_type));
+
+					if (current.value > result.value) result = current;
+				}
+			}
+		}
+	}
+}
+
+void Logic::check_move(Move& result) {
+	for (const auto& unit : map.units) {
+
 	}
 }
 
@@ -90,6 +137,8 @@ float Logic::get_economic_value(std::pair<int, int> pos, int gold_mod, int incom
 		gold_mod += 6;
 	}
 
+	// TODO: Tower
+
 	if (goal_income - map.income > 0) ret += (goal_income - map.income) * income_mod;
 	else ret += income_mod;
 
@@ -100,27 +149,53 @@ float Logic::get_economic_value(std::pair<int, int> pos, int gold_mod, int incom
 }
 
 float Logic::get_threat_value(std::pair<int, int> pos, int self_defense) {
-	int defense = 0;
-	map.iterate_neighbours(pos, [this, &defense](std::pair<int, int> n_pos) {
-		int n_defense = Field::get_defense(map.get_field(n_pos).type);
-		if (defense < n_defense) defense = n_defense;
-		});
+	int defense = map.get_defense(pos);
 	if (defense < self_defense) defense = self_defense;
-
 
 	return defense - map.get_threat(pos);
 }
 
+float Logic::get_defense_value(std::pair<int, int> pos, int self_defense) {
+	int deffed_fields = 0;
+	if (self_defense >= map.get_threat(pos) && map.get_defense(pos) < map.get_threat(pos)) ++deffed_fields;
+	map.iterate_neighbours(pos, [this, &self_defense, &deffed_fields](std::pair<int, int> n_pos) {
+		int n_defense = map.get_defense(n_pos);
+		if (self_defense >= map.get_threat(n_pos) && n_defense < map.get_threat(n_pos)) ++deffed_fields;
+		});
+	
+	return 10.0 * deffed_fields;
+}
+
 void Logic::apply_buy(Buy& buy) {
+	int income = 0;
+	int field_type = 0;
+	Field& current_field = map.get_field(buy.pos);
 	switch (buy.type)
 	{
 	case Buy::FARM:
-		infos.gold -= 12 + 2 * static_cast<int>(map.farms.size());
+		infos.gold -= map.get_cost(Field::FARM);
 		map.income += Field::get_income(Field::FARM);
 		map.farms.push_back(buy.pos);
-		map.get_field(buy.pos).type = Field::FARM;
+		current_field.type = Field::FARM;
 		break;
+
+	case Buy::PEASANT:
+	case Buy::SPEARMAN:
+	case Buy::SWORDSMAN:
+	case Buy::KNIGHT:
+		field_type = (buy.type - Buy::PEASANT) + Field::PEASANT;
+		infos.gold -= map.get_cost(field_type);
+		income = Field::get_income(field_type);
+		if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
+			field_type = Field::get_merged_type(field_type, current_field.type);
+			income = Field::get_income(field_type) - Field::get_income(current_field.type);
+		}
+		map.units.push_back(buy.pos);
+		current_field.type = field_type;
+		break;
+
 	default:
+
 		break;
 	}
 }

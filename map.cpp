@@ -160,6 +160,12 @@ void Map::process_loss(std::pair<int, int> pos) {
         farms.erase(it);
         return;
     }
+
+    it = std::find(units.begin(), units.end(), pos);
+    if (it != units.end()) {
+        units.erase(it);
+        return;
+    }
 }
 
 void Map::set_threat(std::pair<int, int> pos, int level) {
@@ -181,4 +187,46 @@ void Map::set_threat(std::pair<int, int> pos, int level) {
 
 int& Map::get_threat(std::pair<int, int> pos) {
     return threat_levels[pos.first + infos.radius][pos.second + infos.radius];
+}
+
+int Map::get_cost(int field_type) {
+    switch (field_type)
+    {
+    case Field::FARM:
+        return 12 + 2 * static_cast<int>(farms.size());
+    case Field::TOWER:
+        return 15;
+    case Field::FORT:
+        return 35;
+    case Field::PEASANT:
+        return 2 + 4 * static_cast<int>(units.size());
+    case Field::SPEARMAN:
+        return 20;
+    case Field::SWORDSMAN:
+        return 30;
+    case Field::KNIGHT:
+        return 40;
+    default:
+        return 0;
+    }
+}
+
+int Field::get_merged_type(int add_type, int base_type) {
+    if (add_type == PEASANT && base_type == PEASANT) return SPEARMAN;
+    else if (add_type == SPEARMAN && base_type == SPEARMAN) return KNIGHT;
+    else if (add_type == PEASANT && base_type == SPEARMAN) return SWORDSMAN;
+    else if (add_type == SPEARMAN && base_type == PEASANT) return SWORDSMAN;
+    else if (add_type == PEASANT && base_type == SWORDSMAN) return KNIGHT;
+    else if (add_type == SWORDSMAN && base_type == PEASANT) return KNIGHT;
+    
+    return -1;
+}
+
+int Map::get_defense(std::pair<int, int> pos) {
+    int defense = 0;
+    iterate_neighbours(pos, [this, &defense](std::pair<int, int> n_pos) {
+        int n_defense = Field::get_defense(get_field(n_pos).type);
+        if (defense < n_defense) defense = n_defense;
+        });
+    return defense;
 }

@@ -69,6 +69,7 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 			while (!ss.eof()) {
 				q = get_next_int(ss, substring);
 				r = get_next_int(ss, substring);
+				logic.map.process_loss({q, r});
 			}
 		}
 		else if (substring == "FIELD") {
