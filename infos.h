@@ -7,6 +7,8 @@ class Infos {
 public:
     int id{ -1 };
     int radius{ -1 };
+    int gold{ -1 };
+    int tick{ -1 };
 
     static Infos& get_instance()
     {

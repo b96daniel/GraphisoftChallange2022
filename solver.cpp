@@ -45,7 +45,7 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 
 	std::stringstream ss;
 	std::string substring;
-	int id = 0, gold = 0, q, r, value, owner;
+	int id = 0, gold = 0, tick = 0,  q, r, value, owner;
 	bool is_water;
 
 	// Split and process all infos
@@ -55,8 +55,9 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 
 		// Handle each necessary info
 		if (substring == "REQ") {
-			for (int i = 0; i < 3; ++i) ss >> substring;
-			id = std::stoi(substring);
+			for (int i = 0; i < 2; ++i) ss >> substring;
+			tick = std::stoi(substring);
+			id = get_next_int(ss, substring);
 
 			global_infos.id = id;
 		}
@@ -85,7 +86,6 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 				ss >> substring;
 
 				logic.map.set_field({q, r}, value, owner, substring, is_water);
-				logic.gold = gold;
 			}
 		}
 		else if (substring == "END") {
@@ -97,6 +97,8 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 		ss.clear();
 	}
 
+	global_infos.gold = gold;
+	global_infos.tick = tick;
 	for (auto& action : logic.get_next_actions(tick_start)) {
 		commands.push_back(action);
 	}
