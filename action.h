@@ -33,10 +33,9 @@ public:
 };
 
 class Move : public Action {
+public:
     std::pair<int, int> from_pos{ 0, 0 };
     std::pair<int, int> to_pos{ 0, 0 };
-
-public:
     virtual std::string str() override;
     Move() = default;
     Move(std::pair<int, int> from_pos, std::pair<int, int> to_pos) : from_pos{ from_pos }, to_pos{ to_pos } {};
