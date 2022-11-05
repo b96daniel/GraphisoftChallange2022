@@ -134,6 +134,7 @@ void Logic::apply_move(Move& move) {
 
 std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time_point start) {
 	std::vector<std::string> result;
+	std::vector<Field*> moveable_units = map.units;
 
 	// Look for the next step while there is a reasonable one or until the limit is reached
 	while (static_cast<int>(result.size()) < 1024) {
@@ -141,7 +142,7 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 		Move best_move;
 
 		check_buy(best_buy);
-		check_move(best_move);
+		check_move(best_move, moveable_units);
 
 		// Choose and apply best action
 		if (best_buy.value > best_move.value) {
