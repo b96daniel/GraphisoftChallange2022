@@ -5,10 +5,8 @@
 #include <deque>
 
 // TODOs
-// TODO: Timer started from solver -> Early return in get next actions
 // TODO: Add time check to get_next_actions
 // TODO: Discuss fields reset with the team
-// TODO: Change iterate neighbours to Field parameters
 
 // -----------------
 // Private functions
@@ -81,15 +79,6 @@ void Logic::check_buy(Buy& buy) {
 						income = Field::get_income(merged_type) - Field::get_income(current_field->type);
 					}
 
-					// Economic effect
-					//curr_buy.value += get_economic_value(pos, -cost, income);
-
-					// Safety value
-					//curr_buy.value += get_threat_value(pos, Field::get_defense(merged_type));
-
-					// Defense value
-					//curr_buy.value += get_defense_value(pos, Field::get_defense(merged_type));
-
 					if (curr_buy.value > buy.value) buy = curr_buy;
 				}
 			}
@@ -99,7 +88,50 @@ void Logic::check_buy(Buy& buy) {
 
 // Checks the possible movements of the units, chooses the best one out of them
 void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
+	Move current_move;
 
+	// Check all moveable units
+	for (const auto& unit : moveable_units) {
+		current_move.from_pos = unit->pos;
+		
+		// Store reachable fields in visited, with the number of steps needed to reach that field
+		std::map<Field*, int> visited;
+		std::deque<Field*> not_visited;
+		visited[unit] = 0;
+		not_visited.push_back(unit);
+
+		while (!not_visited.empty()) {
+			Field* current_field = not_visited.front();
+			not_visited.pop_front();
+
+			map.iterate_neighbours(*current_field, [&visited, &not_visited, current_field, this](Field& neighbour) {
+				if (visited.find(current_field) == visited.end()) {
+					if (!neighbour.water) { /* Can step on this field or can step through it */ // <---- Ide azok a feltételek amik kizárják a mezõn átlépés lehetõségét (pl: nagyobb védelem)
+						visited[&neighbour] = visited[current_field] + 1;
+
+						if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */ // <---- Ide azok a feltételek amik esetén továbbléphetünk a mezõrõl (Szerintem ez ennyi)
+							not_visited.push_back(&neighbour);
+					}
+				}
+			});
+		}
+
+		/*
+		Ezután a visited-ben azok a mezõk lesznek, amin áthaladhat vagy ráérkezhet a unit.
+		Ezeket még le kell ellenõrizni, pl: upgrade, figyelmen kell hagyni az épülettel rendelkezõ mezõket
+		*/
+
+		/*
+		for (const auto& value : visited) {
+			if (value.first->owner != infos.id) {
+				current_move.value = 0;
+				current_move.to_pos = value.first->pos;
+				units.erase(std::find(units.begin(), units.end(), result.from_pos));
+				return;
+			}
+		}
+		*/
+	}
 }
 
 // Applies the decesion on the internal implementation caused by the buy action
@@ -195,39 +227,6 @@ void Logic::calculate_neighbouring_fields() {
 			Field& current_field = map.get_field(n_pos);
 			if (current_field.owner != infos.id && !current_field.water) map.neighbouring_fields.insert(n_pos);
 			});
-	}
-}
-
-void Logic::check_move(Move& result, std::vector<std::pair<int, int>>& units) {
-	for (const auto& unit : units) {
-		result.from_pos = unit;
-		std::map<std::pair<int, int>, int> visited;
-		std::deque<std::pair<int, int>> not_visited;
-		visited[unit] = 0;
-		not_visited.push_back(unit);
-
-		while (!not_visited.empty()) {
-			std::pair<int, int> current_pos = not_visited.front();
-			not_visited.pop_front();
-
-			if (visited[current_pos] < 4) {
-				map.iterate_neighbours(current_pos, [&visited, &not_visited, current_pos](std::pair<int, int> n_pos) {
-					if (visited.find(n_pos) == visited.end()) {
-						visited[n_pos] = visited[current_pos] + 1;
-						not_visited.push_back(n_pos);
-					}
-					});
-			}
-		}
-
-		for (const auto& to_pos : visited) {
-			if (map.get_field(to_pos.first).owner != infos.id) {
-				result.value = 0;
-				result.to_pos = to_pos.first;
-				units.erase(std::find(units.begin(), units.end(), result.from_pos));
-				return;
-			}
-		}
 	}
 }
 

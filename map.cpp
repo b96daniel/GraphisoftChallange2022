@@ -66,10 +66,9 @@ bool Map::is_farmable(Field* own_field)
     }
     else
     {
-        iterate_neighbours(own_field->pos, [this, &res](std::pair<int, int> n_pos) {
-            Field& curr_field = get_field(n_pos);
-            if (curr_field.owner == infos.id &&
-                (curr_field.type == Field::FARM || curr_field.type == Field::CASTLE)) res = true;
+        iterate_neighbours(*own_field, [this, &res](Field& neighbour) {
+            if (neighbour.owner == infos.id &&
+                (neighbour.type == Field::FARM || neighbour.type == Field::CASTLE)) res = true;
         });
     }
     return res;
@@ -77,20 +76,20 @@ bool Map::is_farmable(Field* own_field)
 
 
 // Iterates through the neighbours of a field
-void Map::iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func) {
-    int q = pos.first;
-    int r = pos.second;
+void Map::iterate_neighbours(Field& field, const std::function<void(Field&)>& func) {
+    int q = field.pos.first;
+    int r = field.pos.second;
 
-    if (q - 1 >= -infos.radius - std::min(0, r)) func({ q - 1, r});
-    if (q + 1 <= infos.radius - std::max(0, r)) func({ q + 1, r});
-    if (r - 1 >= -infos.radius - std::min(0, q)) func({ q, r - 1});
-    if (r + 1 <= infos.radius - std::max(0, q)) func({ q, r + 1});
+    if (q - 1 >= -infos.radius - std::min(0, r)) func(get_field({ q - 1, r }));
+    if (q + 1 <= infos.radius - std::max(0, r)) func(get_field({ q + 1, r}));
+    if (r - 1 >= -infos.radius - std::min(0, q)) func(get_field({ q, r - 1}));
+    if (r + 1 <= infos.radius - std::max(0, q)) func(get_field({ q, r + 1}));
 
     if (q - 1 >= -infos.radius - std::min(0, r) &&
-        r + 1 <= infos.radius - std::max(0, q)) func({ q - 1, r + 1});
+        r + 1 <= infos.radius - std::max(0, q)) func(get_field({ q - 1, r + 1}));
        
     if (q + 1 <= infos.radius - std::max(0, r) &&
-        r - 1 >= -infos.radius - std::min(0, q)) func({ q + 1, r - 1});
+        r - 1 >= -infos.radius - std::min(0, q)) func(get_field({ q + 1, r - 1}));
 }
 
 int Map::get_numof_peasants()

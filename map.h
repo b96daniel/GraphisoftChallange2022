@@ -26,7 +26,7 @@ public:
     // Public functions
     void init();
     void reset();
-    void iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func);
+    void iterate_neighbours(Field& field, const std::function<void(Field&)>& func);
     Field& get_field(std::pair<int, int> pos);
     void set_field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water);
     int get_cost(int field_type);
