@@ -15,25 +15,101 @@
 
 void Logic::check_buy(Buy& buy) {
 	int cost = map.get_cost(Field::FARM);
-	if (infos.gold >= cost) {
-		Buy current;
-		current.type = Field::FARM;
+	Buy curr_buy;
+	if (infos.gold >= cost) {		
+		curr_buy.type = Field::FARM;
 
 		for (const auto& current_field : map.own_fields) {
 			if (map.is_farmable(current_field)) {
-				current.pos = current_field->pos;
-				current.value = 0;
+				curr_buy.pos = current_field->pos;
+				curr_buy.value = 0;
 
 				// Economic effect
-				//current.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
+				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
 
 				// Safety value
-				//current.value += get_threat_value(pos, Field::get_defense(Field::FARM));
+				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
 
-				if (current.value > buy.value) buy = current;
+				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
 		}
-	}	
+	}
+
+	cost = map.get_cost(Field::TOWER);
+	if (infos.gold >= cost) {
+		curr_buy.type = Field::TOWER;
+		for (const auto& current_field : map.own_fields) {
+			if (current_field->type == Field::EMPTY || current_field->type == Field::GRAVE) {
+				curr_buy.pos = current_field->pos;
+				curr_buy.value = 0;
+
+				// Economic effect
+				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
+
+				// Safety value
+				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
+
+				if (curr_buy.value > buy.value) buy = curr_buy;
+			}
+		}
+	}
+
+	cost = map.get_cost(Field::FORT);
+	if (infos.gold >= cost) {
+		curr_buy.type = Field::FORT;
+		for (const auto& current_field : map.own_fields) {
+			if (current_field->type == Field::EMPTY || current_field->type == Field::GRAVE 
+				|| current_field->type == Field::TOWER) {
+				curr_buy.pos = current_field->pos;
+				curr_buy.value = 0;
+
+				// Economic effect
+				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
+
+				// Safety value
+				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
+
+				if (curr_buy.value > buy.value) buy = curr_buy;
+			}
+		}
+	}
+
+	for (int type = Field::PEASANT; type <= Field::KNIGHT; ++type) {
+		int cost = map.get_cost(type);
+		if (infos.gold >= cost) {
+			Buy curr_buy;
+			curr_buy.type = Field::Type(type);
+
+			for (const auto& current_field : map.own_fields) {
+				if (!(current_field->type >= Field::CASTLE && current_field->type <= Field::FORT)) {
+					if (current_field->type >= Field::PEASANT && current_field->type <= Field::KNIGHT &&
+						Field::get_merged_type(type, current_field->type) == -1)
+						continue;
+
+					curr_buy.pos = current_field->pos;
+					curr_buy.value = 0;
+					int merged_type = type;
+
+					int income = Field::get_income(merged_type);
+					if (current_field->type >= Field::PEASANT && current_field->type <= Field::KNIGHT) {
+						merged_type = Field::get_merged_type(type, current_field->type);
+						income = Field::get_income(merged_type) - Field::get_income(current_field->type);
+					}
+
+					// Economic effect
+					//curr_buy.value += get_economic_value(pos, -cost, income);
+
+					// Safety value
+					//curr_buy.value += get_threat_value(pos, Field::get_defense(merged_type));
+
+					// Defense value
+					//curr_buy.value += get_defense_value(pos, Field::get_defense(merged_type));
+
+					if (curr_buy.value > buy.value) buy = curr_buy;
+				}
+			}
+		}
+	}
 }
 
 // Applies the decesion on the internal implementation caused by the buy action

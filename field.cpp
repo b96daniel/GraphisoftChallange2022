@@ -55,9 +55,15 @@ std::string Field::get_type_str(Type type) {
     }
 }
 
-/*
-bool Field::operator==(const Field& f) {
-    return pos == f.pos;
+int Field::get_merged_type(int add_type, int base_type) {
+    if (add_type == PEASANT && base_type == PEASANT) return SPEARMAN;
+    else if (add_type == SPEARMAN && base_type == SPEARMAN) return KNIGHT;
+    else if (add_type == PEASANT && base_type == SPEARMAN) return SWORDSMAN;
+    else if (add_type == SPEARMAN && base_type == PEASANT) return SWORDSMAN;
+    else if (add_type == PEASANT && base_type == SWORDSMAN) return KNIGHT;
+    else if (add_type == SWORDSMAN && base_type == PEASANT) return KNIGHT;
+
+    return -1;
 }
 
 int Field::get_income(int type) {
@@ -93,6 +99,13 @@ int Field::get_income(int type) {
     }
 };
 
+
+/*
+bool Field::operator==(const Field& f) {
+    return pos == f.pos;
+}
+
+
 int Field::get_defense(int type) {
     switch (type)
     {
@@ -123,14 +136,4 @@ int Field::get_defense(int type) {
     }
 };
 
-int Field::get_merged_type(int add_type, int base_type) {
-    if (add_type == PEASANT && base_type == PEASANT) return SPEARMAN;
-    else if (add_type == SPEARMAN && base_type == SPEARMAN) return KNIGHT;
-    else if (add_type == PEASANT && base_type == SPEARMAN) return SWORDSMAN;
-    else if (add_type == SPEARMAN && base_type == PEASANT) return SWORDSMAN;
-    else if (add_type == PEASANT && base_type == SWORDSMAN) return KNIGHT;
-    else if (add_type == SWORDSMAN && base_type == PEASANT) return KNIGHT;
-
-    return -1;
-}
 */

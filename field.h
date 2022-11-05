@@ -34,11 +34,11 @@ public:
     Field(std::pair<int, int> pos, int value, int owner, std::string& type_str, bool water);
     static Field::Type get_type_from_str(std::string& type_str);
     static std::string get_type_str(Type type);
+    static int get_merged_type(int add_type, int base_type);
+    static int get_income(int type);
 
     /*
-    static int get_income(int type);
     static int get_defense(int type);
-    static int get_merged_type(int add_type, int base_type);
     bool operator==(const Field& f);
     */
 };
