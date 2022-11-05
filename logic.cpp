@@ -14,7 +14,26 @@
 // -----------------
 
 void Logic::check_buy(Buy& buy) {
+	int cost = map.get_cost(Field::FARM);
+	if (infos.gold >= cost) {
+		Buy current;
+		current.type = Field::FARM;
 
+		for (const auto& current_field : map.own_fields) {
+			if (map.is_farmable(current_field)) {
+				current.pos = current_field->pos;
+				current.value = 0;
+
+				// Economic effect
+				//current.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
+
+				// Safety value
+				//current.value += get_threat_value(pos, Field::get_defense(Field::FARM));
+
+				if (current.value > buy.value) buy = current;
+			}
+		}
+	}	
 }
 
 // Applies the decesion on the internal implementation caused by the buy action

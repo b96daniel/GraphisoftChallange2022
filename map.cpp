@@ -26,6 +26,8 @@ void Map::reset() {
     }
 
     own_fields.clear();
+    units.clear();
+    farms.clear();
     /*neighbouring_fields.clear();
     income = 0;*/
 }
@@ -54,11 +56,30 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
     };*/
 }
 
-/*
+bool Map::is_farmable(Field* own_field)
+{
+    bool res = false;
+    if (Field::GRAVE > own_field->type > Field::EMPTY)
+    {
+        return false;
+    }
+    else
+    {
+            iterate_neighbours(own_field->pos, [this, &res](std::pair<int, int> n_pos) {   
+                Field& curr_field = get_field(n_pos);
+                if (curr_field.owner == infos.id && 
+                   (curr_field.type == Field::FARM || curr_field.type == Field::CASTLE)) res = true;
+                });
+    }
+    return res;
+}
+
+
+
 void Map::iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func) {
     int q = pos.first;
     int r = pos.second;
-
+    
     // TODO: Can be restructured
     if (q - 1 >= -infos.radius - std::min(0, r)) func({ q - 1, r});
     if (q + 1 <= infos.radius - std::max(0, r)) func({ q + 1, r});
@@ -71,6 +92,41 @@ void Map::iterate_neighbours(std::pair<int, int> pos, const std::function<void(s
     if (q + 1 <= infos.radius - std::max(0, r) &&
         r - 1 >= -infos.radius - std::min(0, q)) func({ q + 1, r - 1});
 }
+
+int Map::get_numof_peasants()
+{      
+    int res = 0;
+    for (const auto& unit : units)
+    {
+        if (unit->type == Field::PEASANT)
+            ++res;
+    }
+    return res;
+}
+
+int Map::get_cost(int field_type) {
+    switch (field_type)
+    {
+    case Field::FARM:
+        return 12 + 2 * static_cast<int>(farms.size());
+    case Field::TOWER:
+        return 15;
+    case Field::FORT:
+        return 35;
+    case Field::PEASANT:
+        return std::max(2 + 4 * get_numof_peasants(), 10);
+    case Field::SPEARMAN:
+        return 20;
+    case Field::SWORDSMAN:
+        return 30;
+    case Field::KNIGHT:
+        return 40;
+    default:
+        return 0;
+    }
+}
+
+/*
 
 void Map::process_loss(std::pair<int, int> pos) {
     auto it = std::find(farms.begin(), farms.end(), pos);
@@ -90,7 +146,7 @@ void Map::set_threat(std::pair<int, int> pos, int level) {
     constexpr int depth = 4;
     std::array<std::set<std::pair<int, int>>, depth + 1> buffers;
     buffers[0].insert(pos);
-    
+
     for (int i = 0; i < depth; ++i) {
         for (const auto& surrounding : buffers[i]) {
             iterate_neighbours(surrounding, [&i, &buffers](std::pair<int, int> s_pos) {buffers[i + 1].insert(s_pos);});
@@ -106,29 +162,9 @@ void Map::set_threat(std::pair<int, int> pos, int level) {
 int& Map::get_threat(std::pair<int, int> pos) {
     return threat_levels[pos.first + infos.radius][pos.second + infos.radius];
 }
+*/
 
-int Map::get_cost(int field_type) {
-    switch (field_type)
-    {
-    case Field::FARM:
-        return 12 + 2 * static_cast<int>(farms.size());
-    case Field::TOWER:
-        return 15;
-    case Field::FORT:
-        return 35;
-    case Field::PEASANT:
-        return 2 + 4 * static_cast<int>(units.size());
-    case Field::SPEARMAN:
-        return 20;
-    case Field::SWORDSMAN:
-        return 30;
-    case Field::KNIGHT:
-        return 40;
-    default:
-        return 0;
-    }
-}
-
+/*
 int Map::get_defense(std::pair<int, int> pos) {
     int defense = 0;
     iterate_neighbours(pos, [this, &defense](std::pair<int, int> n_pos) {
