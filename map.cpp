@@ -61,7 +61,7 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
 bool Map::is_farmable(Field* own_field)
 {
     bool res = false;
-    if (Field::GRAVE > own_field->type > Field::EMPTY)
+    if (Field::GRAVE > own_field->type && own_field->type > Field::EMPTY)
     {
         return false;
     }
