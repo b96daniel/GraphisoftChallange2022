@@ -28,8 +28,7 @@ void Map::reset() {
     own_fields.clear();
     units.clear();
     farms.clear();
-    /*neighbouring_fields.clear();
-    income = 0;*/
+    income = 0;
 }
 
 // Returns a field element from the array, based on a position from the in-game coordinate system
@@ -51,7 +50,7 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
         own_fields.push_back(&current_field);
         if (current_field.type == Field::FARM) farms.push_back(&current_field);
         if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) units.push_back(&current_field);
-        //income += value + current_field.get_income(current_type);
+        income += value + current_field.get_income(current_field.type);
     }
     /*else if (current_type >= Field::PEASANT && current_type <= Field::KNIGHT) {
         set_threat(current_field.pos, (current_type - Field::PEASANT) + 1);
@@ -67,11 +66,11 @@ bool Map::is_farmable(Field* own_field)
     }
     else
     {
-            iterate_neighbours(own_field->pos, [this, &res](std::pair<int, int> n_pos) {   
-                Field& curr_field = get_field(n_pos);
-                if (curr_field.owner == infos.id && 
-                   (curr_field.type == Field::FARM || curr_field.type == Field::CASTLE)) res = true;
-                });
+        iterate_neighbours(own_field->pos, [this, &res](std::pair<int, int> n_pos) {
+            Field& curr_field = get_field(n_pos);
+            if (curr_field.owner == infos.id &&
+                (curr_field.type == Field::FARM || curr_field.type == Field::CASTLE)) res = true;
+        });
     }
     return res;
 }

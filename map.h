@@ -21,6 +21,7 @@ public:
     std::vector<Field*> own_fields;
     std::vector<Field*> farms;
     std::vector<Field*> units;
+    int income{ 0 };
 
     // Public functions
     void init();
@@ -33,8 +34,7 @@ public:
     bool is_farmable(Field* field);
 
 
-    /*
-    int income{ 0 };
+    /*  
     std::vector<std::vector<int>> threat_levels;
     std::set<std::pair<int, int>> neighbouring_fields;
     void process_loss(std::pair<int, int> pos);

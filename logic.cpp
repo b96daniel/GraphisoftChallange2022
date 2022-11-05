@@ -14,9 +14,11 @@
 // Private functions
 // -----------------
 
+// Checks the possible buy options, chooses the best one out of them
 void Logic::check_buy(Buy& buy) {
-	int cost = map.get_cost(Field::FARM);
 	Buy curr_buy;
+
+	int cost = map.get_cost(Field::FARM);
 	if (infos.gold >= cost) {		
 		curr_buy.type = Field::FARM;
 
@@ -24,12 +26,6 @@ void Logic::check_buy(Buy& buy) {
 			if (map.is_farmable(current_field)) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
-
-				// Economic effect
-				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
-
-				// Safety value
-				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -44,12 +40,6 @@ void Logic::check_buy(Buy& buy) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
 
-				// Economic effect
-				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
-
-				// Safety value
-				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
-
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
 		}
@@ -63,12 +53,6 @@ void Logic::check_buy(Buy& buy) {
 				|| current_field->type == Field::TOWER) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
-
-				// Economic effect
-				//curr_buy.value += get_economic_value(pos, -cost, Field::get_income(Field::FARM));
-
-				// Safety value
-				//curr_buy.value += get_threat_value(pos, Field::get_defense(Field::FARM));
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -120,7 +104,45 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 
 // Applies the decesion on the internal implementation caused by the buy action
 void Logic::apply_buy(Buy& buy) {
+	Field& current_field = map.get_field(buy.pos);
+	infos.gold -= map.get_cost(buy.type);
+	map.income -= Field::get_income(current_field.type);
+	int new_type;
 
+	switch (buy.type)
+	{
+	case Field::FARM:
+		map.income += Field::get_income(Field::FARM);
+		current_field.type = Field::FARM;
+		map.farms.push_back(&current_field);
+		break;
+
+	case Field::TOWER:
+		map.income += Field::get_income(Field::TOWER);
+		current_field.type = Field::TOWER;
+		break;
+
+	case Field::FORT:
+		map.income += Field::get_income(Field::FORT);
+		current_field.type = Field::FORT;
+		break;
+
+	case Field::PEASANT:
+	case Field::SPEARMAN:
+	case Field::SWORDSMAN:
+	case Field::KNIGHT:
+		new_type = buy.type;
+		if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
+			new_type = Field::get_merged_type(buy.type, current_field.type);
+		}
+		else map.units.push_back(&current_field);
+		map.income += Field::get_income(new_type);
+		current_field.type = static_cast<Field::Type>(new_type);
+		break;
+
+	default:
+		break;
+	}
 }
 
 // Applies the decesion on the internal implementation caused by the move action
@@ -173,70 +195,6 @@ void Logic::calculate_neighbouring_fields() {
 			Field& current_field = map.get_field(n_pos);
 			if (current_field.owner != infos.id && !current_field.water) map.neighbouring_fields.insert(n_pos);
 			});
-	}
-}
-
-void Logic::check_farm_buy(Buy& result) {
-	int cost = 12 + 2 * static_cast<int>(map.farms.size());
-	if (infos.gold >= cost) {
-		Buy current;
-		current.type = Buy::FARM;
-
-		for (const auto& pos : map.own_fields) {
-			Field& current_field = map.get_field(pos);
-			if (current_field.type == Field::EMPTY || current_field.type == Field::GRAVE) {
-				current.pos = pos;
-				current.value = 0;
-
-				// Economic effect
-				current.value += get_economic_value(pos, -cost , Field::get_income(Field::FARM));
-
-				// Safety value
-				current.value += get_threat_value(pos, Field::get_defense(Field::FARM));
-
-				if (current.value > result.value) result = current;
-			}
-		}
-	}
-}
-
-void Logic::check_unit_buy(Buy& result) {
-	for (int type = Field::PEASANT; type <= Field::KNIGHT; ++type) {
-		int cost = map.get_cost(type);
-		if (infos.gold >= cost) {
-			Buy current;
-			current.type = Buy::PEASANT + (type - Field::PEASANT);
-
-			for (const auto& pos : map.own_fields) {
-				Field& current_field = map.get_field(pos);
-				if (!(current_field.type >= Field::CASTLE && current_field.type <= Field::FORT)) {
-					if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT &&
-						Field::get_merged_type(type, current_field.type) == -1)
-							continue;
-					
-					current.pos = pos;
-					current.value = 0;
-					int current_type = type;
-
-					int income = Field::get_income(current_type);
-					if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
-						current_type = Field::get_merged_type(type, current_field.type);
-						income = Field::get_income(current_type) - Field::get_income(current_field.type);
-					}
-
-					// Economic effect
-					current.value += get_economic_value(pos, -cost, income);
-
-					// Safety value
-					current.value += get_threat_value(pos, Field::get_defense(current_type));
-
-					// Defense value
-					current.value += get_defense_value(pos, Field::get_defense(current_type));
-
-					if (current.value > result.value) result = current;
-				}
-			}
-		}
 	}
 }
 
@@ -317,44 +275,5 @@ float Logic::get_defense_value(std::pair<int, int> pos, int self_defense) {
 		});
 	
 	return 10.0 * deffed_fields;
-}
-
-void Logic::apply_buy(Buy& buy) {
-	int income = 0;
-	int field_type = 0;
-	Field& current_field = map.get_field(buy.pos);
-	switch (buy.type)
-	{
-	case Buy::FARM:
-		infos.gold -= map.get_cost(Field::FARM);
-		map.income += Field::get_income(Field::FARM);
-		map.farms.push_back(buy.pos);
-		current_field.type = Field::FARM;
-		break;
-
-	case Buy::PEASANT:
-	case Buy::SPEARMAN:
-	case Buy::SWORDSMAN:
-	case Buy::KNIGHT:
-		field_type = (buy.type - Buy::PEASANT) + Field::PEASANT;
-		infos.gold -= map.get_cost(field_type);
-		income = Field::get_income(field_type);
-		if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
-			field_type = Field::get_merged_type(field_type, current_field.type);
-			income = Field::get_income(field_type) - Field::get_income(current_field.type);
-		}
-		map.units.push_back(buy.pos);
-		// current_field.type = field_type;
-		break;
-
-	default:
-
-		break;
-	}
-}
-
-void Logic::apply_move(Move& move) {
-	map.units.erase(std::find(map.units.begin(), map.units.end(), move.from_pos));
-	map.units.push_back(move.to_pos);
 }
 */
