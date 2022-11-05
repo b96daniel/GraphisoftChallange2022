@@ -1,44 +1,44 @@
 #ifndef ACTION_H
 #define ACTION_H
 
+#include "field.h"
+
 #include <string>
 #include <utility>
 
 class Action {
     public:
+        // Public variables
         static constexpr float MIN_VALUE = -1000000000.0;
         float value = MIN_VALUE;
+
+        // Public functions
         virtual std::string str() = 0;
         virtual ~Action() = default;
 };
 
 class Buy : public Action {
 public:
+    // Public variables
     std::pair<int, int> pos{ 0, 0 };
-    int type{ 0 };
-    std::string get_type_str();
-    enum {
-        FARM,
-        TOWER,
-        FORT,
-        PEASANT,
-        SPEARMAN,
-        SWORDSMAN,
-        KNIGHT
-    };
+    Field::Type type{ Field::FARM };
 
-    virtual std::string str() override;
+    // Public functions
     Buy() = default;
-    Buy(std::pair<int, int> pos,int type) : pos{ pos }, type{ type } {};
+    Buy(std::pair<int, int> pos, Field::Type type);
+    virtual std::string str() override;
 };
 
 class Move : public Action {
 public:
+    // Public variables
     std::pair<int, int> from_pos{ 0, 0 };
     std::pair<int, int> to_pos{ 0, 0 };
-    virtual std::string str() override;
+
+    // Public functions
     Move() = default;
-    Move(std::pair<int, int> from_pos, std::pair<int, int> to_pos) : from_pos{ from_pos }, to_pos{ to_pos } {};
+    Move(std::pair<int, int> from_pos, std::pair<int, int> to_pos);
+    virtual std::string str() override;
 };
 
 #endif

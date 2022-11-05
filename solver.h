@@ -1,8 +1,6 @@
 #ifndef SOLVER_H_INCLUDED
 #define SOLVER_H_INCLUDED
 
-#define DEBUG 1
-
 #include "logic.h"
 #include "infos.h"
 

@@ -4,6 +4,66 @@
 #include <map>
 #include <deque>
 
+// TODOs
+// TODO: Timer started from solver -> Early return in get next actions
+// TODO: Add time check to get_next_actions
+// TODO: Discuss fields reset with the team
+
+// -----------------
+// Private functions
+// -----------------
+
+void Logic::check_buy(Buy& buy) {
+
+}
+
+// Applies the decesion on the internal implementation caused by the buy action
+void Logic::apply_buy(Buy& buy) {
+
+}
+
+// Applies the decesion on the internal implementation caused by the move action
+void Logic::apply_move(Move& move) {
+
+}
+
+// ----------------
+// Public functions
+// ----------------
+
+std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time_point start) {
+	std::vector<std::string> result;
+
+	// Look for the next step while there is a reasonable one or until the limit is reached
+	while (static_cast<int>(result.size()) < 1024) {
+		Buy best_buy;
+		Move best_move;
+
+		check_buy(best_buy);
+
+		// Choose and apply best action
+		if (best_buy.value > best_move.value) {
+			result.push_back(best_buy.str());
+			apply_buy(best_buy);
+		}
+		else if (best_move.value > Action::MIN_VALUE) {
+			result.push_back(best_move.str());
+			apply_move(best_move);
+		}
+		// If no reasonable decesion was found, then break loop
+		else break;
+	}
+
+	map.reset();
+
+	std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
+	std::cerr << "[logic] Process took: " << process_seconds.count() << " seconds\n";
+	for (const auto& res : result) std::cerr << "[logic] Given command: " << res << "\n";
+
+	return result;
+}
+
+/*
 void Logic::calculate_neighbouring_fields() {
 	for (const auto& pos : map.own_fields) {
 		map.iterate_neighbours(pos, [this](std::pair<int, int> n_pos) {
@@ -11,49 +71,6 @@ void Logic::calculate_neighbouring_fields() {
 			if (current_field.owner != infos.id && !current_field.water) map.neighbouring_fields.insert(n_pos);
 			});
 	}
-}
-
-// TODO: Add time check
-std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time_point start) {
-	std::vector<std::string> result;
-	std::vector<std::pair<int, int>> moveable_units = map.units;
-	calculate_neighbouring_fields();
-
-	while (true) {
-		Buy best_buy;
-		Move best_move;
-		
-		check_farm_buy(best_buy);
-		check_unit_buy(best_buy);
-		check_move(best_move, moveable_units);
-
-		if (best_buy.value > best_move.value) {
-			result.push_back(best_buy.str());
-			apply_buy(best_buy);
-		}
-		else if (best_move.value > Action::MIN_VALUE) {
-			result.push_back(best_buy.str());
-			apply_move(best_move);
-		}
-		else break;
-	}
-
-	reset();
-
-#if DEBUG
-	std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
-	std::cerr << "[logic] Process took: " << process_seconds.count() << " seconds\n";
-#endif
-	for (const auto& res: result) std::cerr << "Given command: " << res << "\n";
-	return result;
-}
-
-void Logic::reset() {
-	map.reset();
-}
-
-void Logic::init() {
-	map.init();
 }
 
 void Logic::check_farm_buy(Buy& result) {
@@ -224,7 +241,7 @@ void Logic::apply_buy(Buy& buy) {
 			income = Field::get_income(field_type) - Field::get_income(current_field.type);
 		}
 		map.units.push_back(buy.pos);
-		current_field.type = field_type;
+		// current_field.type = field_type;
 		break;
 
 	default:
@@ -237,3 +254,4 @@ void Logic::apply_move(Move& move) {
 	map.units.erase(std::find(map.units.begin(), map.units.end(), move.from_pos));
 	map.units.push_back(move.to_pos);
 }
+*/

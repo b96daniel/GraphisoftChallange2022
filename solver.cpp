@@ -5,6 +5,8 @@
 #include <cmath>
 #include <chrono>
 
+
+// Loads the next word into the substring parameter from a stringstream, then returns its int value
 inline int solver::get_next_int(std::stringstream& ss, std::string& substring) {
 	ss >> substring;
 	return std::stoi(substring);
@@ -17,9 +19,7 @@ void solver::startMessage(const std::vector<std::string>& start_infos) {
 
 	// Split and process all infos
 	for (const auto& info : start_infos) {
-#if DEBUG
 		std::cerr << info << std::endl;
-#endif
 		ss << info;
 		ss >> substring;
 		
@@ -34,14 +34,19 @@ void solver::startMessage(const std::vector<std::string>& start_infos) {
 		ss.clear();
 	}
 	
+	// Save the needed information into the Infos singleton class
 	global_infos.radius = radius;
-	logic.init();
+
+	// Init map after the received inputs
+	logic.map.init();
 }
 
 std::vector<std::string> solver::processTick(const std::vector<std::string>& infos) {
-	auto tick_start = std::chrono::steady_clock::now();
-	std::vector<std::string> commands{infos[0]};
+	std::vector<std::string> commands{ infos[0] };
 	commands[0][2] = 'S';
+
+	// Save start time for process timeout checks
+	auto tick_start = std::chrono::steady_clock::now();
 
 	std::stringstream ss;
 	std::string substring;
@@ -58,18 +63,21 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 			for (int i = 0; i < 2; ++i) ss >> substring;
 			tick = std::stoi(substring);
 			id = get_next_int(ss, substring);
-
 			global_infos.id = id;
+			global_infos.tick = tick;
 		}
 		else if (substring == "WARN") {
 			std::cerr << info << std::endl;
 		}
-		else if (substring == "GOLD") gold = get_next_int(ss, substring);
+		else if (substring == "GOLD") {
+			gold = get_next_int(ss, substring);
+			global_infos.gold = gold;
+		}
 		else if (substring == "LOSSES") {
 			while (!ss.eof()) {
 				q = get_next_int(ss, substring);
 				r = get_next_int(ss, substring);
-				logic.map.process_loss({q, r});
+				// logic.map.process_loss({q, r});
 			}
 		}
 		else if (substring == "FIELD") {
@@ -98,10 +106,6 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 		ss.clear();
 	}
 
-	global_infos.gold = gold;
-	global_infos.tick = tick;
-	for (auto& action : logic.get_next_actions(tick_start)) {
-		commands.push_back(action);
-	}
+	for (auto& action : logic.get_next_actions(tick_start)) commands.push_back(action);
 	return commands;
 }
