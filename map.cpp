@@ -49,6 +49,8 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
 
     if (owner == infos.id) {
         own_fields.push_back(&current_field);
+        if (current_field.type == Field::FARM) farms.push_back(&current_field);
+        if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) units.push_back(&current_field);
         //income += value + current_field.get_income(current_type);
     }
     /*else if (current_type >= Field::PEASANT && current_type <= Field::KNIGHT) {
@@ -75,12 +77,11 @@ bool Map::is_farmable(Field* own_field)
 }
 
 
-
+// Iterates through the neighbours of a field
 void Map::iterate_neighbours(std::pair<int, int> pos, const std::function<void(std::pair<int, int>)>& func) {
     int q = pos.first;
     int r = pos.second;
-    
-    // TODO: Can be restructured
+
     if (q - 1 >= -infos.radius - std::min(0, r)) func({ q - 1, r});
     if (q + 1 <= infos.radius - std::max(0, r)) func({ q + 1, r});
     if (r - 1 >= -infos.radius - std::min(0, q)) func({ q, r - 1});

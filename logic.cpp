@@ -8,6 +8,7 @@
 // TODO: Timer started from solver -> Early return in get next actions
 // TODO: Add time check to get_next_actions
 // TODO: Discuss fields reset with the team
+// TODO: Change iterate neighbours to Field parameters
 
 // -----------------
 // Private functions
@@ -36,6 +37,11 @@ void Logic::check_buy(Buy& buy) {
 	}	
 }
 
+// Checks the possible movements of the units, chooses the best one out of them
+void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
+
+}
+
 // Applies the decesion on the internal implementation caused by the buy action
 void Logic::apply_buy(Buy& buy) {
 
@@ -59,6 +65,7 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 		Move best_move;
 
 		check_buy(best_buy);
+		check_move(best_move);
 
 		// Choose and apply best action
 		if (best_buy.value > best_move.value) {
