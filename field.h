@@ -27,6 +27,7 @@ public:
     bool water{ false };
     int value{ 0 };
     int owner{ -1 };
+    bool detected{ false };
     Type type{ EMPTY };
 
     // Public functions

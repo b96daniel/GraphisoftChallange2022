@@ -22,6 +22,7 @@ void Map::reset() {
         for (int j = 0; j < static_cast<int>(fields.size()); ++j) {
             fields[i][j].owner = -1;
             fields[i][j].type = Field::EMPTY;
+            fields[i][j].detected = false;
         }
     }
 
@@ -45,6 +46,7 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
     current_field.owner = owner;
     current_field.water = water;
     current_field.type = Field::get_type_from_str(type_str);
+    current_field.detected = true;
 
     if (owner == infos.id) {
         own_fields.push_back(&current_field);
@@ -135,6 +137,14 @@ int Map::get_defense(Field* field) {
         }
         });
     return defense;
+}
+
+bool Map::neighbours_detected(Field& field) {
+    bool ret = true;
+    iterate_neighbours(field, [&field, this, &ret](Field& neighbour) {
+        ret &= neighbour.detected;
+    });
+    return ret;
 }
 
 /*

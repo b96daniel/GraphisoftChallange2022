@@ -118,7 +118,8 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			map.iterate_neighbours(*current_field, [unit, &visited, &not_visited, current_field, this](Field& neighbour) {
 				if (visited.find(&neighbour) == visited.end()) {
 					/* Can step on this field or can step through it */ 
-					if (!neighbour.water && 
+					if (!neighbour.water &&
+						map.neighbours_detected(neighbour) &&
 						((neighbour.owner == infos.id) || (unit->get_offense() > map.get_defense(&neighbour))))
 					{ 
 						visited[&neighbour] = visited[current_field] + 1;
