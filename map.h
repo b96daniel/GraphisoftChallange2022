@@ -32,6 +32,7 @@ public:
     int get_cost(int field_type);
     int get_numof_peasants();
     bool is_farmable(Field* field);
+    int get_defense(Field* field);
 
 
     /*  
@@ -39,7 +40,7 @@ public:
     std::set<std::pair<int, int>> neighbouring_fields;
     void process_loss(std::pair<int, int> pos);
     int& get_threat(std::pair<int, int> pos);
-    int get_defense(std::pair<int, int> pos);
+
     void set_threat(std::pair<int, int> pos, int level);
     */
 };

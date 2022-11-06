@@ -100,13 +100,8 @@ int Field::get_income(int type) {
 };
 
 
-/*
-bool Field::operator==(const Field& f) {
-    return pos == f.pos;
-}
 
-
-int Field::get_defense(int type) {
+int Field::get_defense() {
     switch (type)
     {
     case EMPTY:
@@ -135,5 +130,36 @@ int Field::get_defense(int type) {
         return 0;
     }
 };
+
+int Field::get_offense() {
+    switch (type)
+    {
+    case EMPTY:
+    case GRAVE:
+    case FARM:
+    case PINE:
+    case PALM:
+    case TOWER:
+    case FORT:
+    case CASTLE:
+        return 0;
+    case PEASANT:
+        return 1;
+    case SPEARMAN:
+        return 2;
+    case SWORDSMAN:
+        return 3;
+    case KNIGHT:
+        return 4;
+    default:
+        return 0;
+    }
+};
+
+
+/*
+bool Field::operator==(const Field& f) {
+    return pos == f.pos;
+}
 
 */

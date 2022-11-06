@@ -125,6 +125,15 @@ int Map::get_cost(int field_type) {
     }
 }
 
+int Map::get_defense(Field* field) {
+    int defense = field->get_defense();
+    iterate_neighbours(*field, [this, &defense](Field& neighbour) {
+        int n_defense = neighbour.get_defense();
+        if (defense < n_defense) defense = n_defense;
+        });
+    return defense;
+}
+
 /*
 
 void Map::process_loss(std::pair<int, int> pos) {
@@ -163,13 +172,5 @@ int& Map::get_threat(std::pair<int, int> pos) {
 }
 */
 
-/*
-int Map::get_defense(std::pair<int, int> pos) {
-    int defense = 0;
-    iterate_neighbours(pos, [this, &defense](std::pair<int, int> n_pos) {
-        int n_defense = Field::get_defense(get_field(n_pos).type);
-        if (defense < n_defense) defense = n_defense;
-        });
-    return defense;
-}
-*/
+
+

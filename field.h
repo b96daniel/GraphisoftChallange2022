@@ -36,9 +36,10 @@ public:
     static std::string get_type_str(Type type);
     static int get_merged_type(int add_type, int base_type);
     static int get_income(int type);
+    int get_defense();
+    int get_offense();
 
     /*
-    static int get_defense(int type);
     bool operator==(const Field& f);
     */
 };

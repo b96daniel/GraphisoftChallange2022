@@ -104,33 +104,50 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			Field* current_field = not_visited.front();
 			not_visited.pop_front();
 
-			map.iterate_neighbours(*current_field, [&visited, &not_visited, current_field, this](Field& neighbour) {
-				if (visited.find(current_field) == visited.end()) {
-					if (!neighbour.water) { /* Can step on this field or can step through it */ // <---- Ide azok a feltételek amik kizárják a mezõn átlépés lehetõségét (pl: nagyobb védelem)
+			map.iterate_neighbours(*current_field, [unit, &visited, &not_visited, current_field, this](Field& neighbour) {
+				if (visited.find(&neighbour) == visited.end()) {
+					/* Can step on this field or can step through it */ 
+					// feltételek: nemvíz, nagyobb támadás mint védelem ha ellenség, saját egységen átléphet (saját épületen is?), merge itt nincs kezelve
+					if (!neighbour.water && (unit->get_offense() > neighbour.get_defense() || (neighbour.owner == infos.id)) )
+					{ 
 						visited[&neighbour] = visited[current_field] + 1;
 
-						if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */ // <---- Ide azok a feltételek amik esetén továbbléphetünk a mezõrõl (Szerintem ez ennyi)
+						if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */
 							not_visited.push_back(&neighbour);
 					}
 				}
 			});
 		}
 
-		/*
-		Ezután a visited-ben azok a mezõk lesznek, amin áthaladhat vagy ráérkezhet a unit.
-		Ezeket még le kell ellenõrizni, pl: upgrade, figyelmen kell hagyni az épülettel rendelkezõ mezõket
-		*/
-
-		/*
+		// Possible endpoints for movement
+		std::vector<Field*> endpoints;
 		for (const auto& value : visited) {
-			if (value.first->owner != infos.id) {
+			if (value.first->owner == infos.id) {
+				if (value.first->type <= Field::KNIGHT && value.first->type >= Field::PEASANT) {
+					// Merge check
+					if (Field::get_merged_type(unit->type, value.first->type) > -1)
+						endpoints.push_back(value.first);
+				}
+				else if (value.first->type == Field::GRAVE && value.first->type <= Field::PALM) {
+					// Avoid all our buildings
+					endpoints.push_back(value.first);
+				}
+			}
+			else {
+				// else enemy - already checked we have enough offense
+				endpoints.push_back(value.first);
+			}			
+		}
+
+		// TODO: find the best endpoint
+		for (const auto& field_to : endpoints) {
+			if (field_to->owner != infos.id) {
 				current_move.value = 0;
-				current_move.to_pos = value.first->pos;
-				units.erase(std::find(units.begin(), units.end(), result.from_pos));
+				current_move.to_pos = field_to->pos;
+				moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), unit));
 				return;
 			}
 		}
-		*/
 	}
 }
 
