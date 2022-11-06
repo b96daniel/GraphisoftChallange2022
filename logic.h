@@ -16,6 +16,8 @@ class Logic {
 	void check_move(Move& move, std::vector<Field*>& moveable_units);
 	void apply_buy(Buy& buy, std::vector<Field*>& moveable_units);
 	void apply_move(Move& move, std::vector<Field*>& moveable_units);
+	float get_economic_value(Field& field, int gold_mod, int income_mod);
+	float get_offense_value(Field* field, Field::Type unit_type);
 public:
 	// Public variables
 	Map map;
@@ -25,7 +27,6 @@ public:
 
 	/*
 	void calculate_neighbouring_fields();
-	float get_economic_value(std::pair<int, int> pos, int gold_mod, int income_mod);
 	float get_threat_value(std::pair<int, int> pos, int self_defense);
 	float get_defense_value(std::pair<int, int> pos, int self_defense);
 	*/

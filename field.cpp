@@ -130,6 +130,10 @@ int Field::get_defense() {
 };
 
 int Field::get_offense() {
+    return get_offense(type);
+}
+
+int Field::get_offense(Type type) {
     switch (type)
     {
     case EMPTY:

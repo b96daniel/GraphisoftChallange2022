@@ -1,12 +1,16 @@
 #include "logic.h"
 #include "action.h"
+#include "constants.h"
 #include <math.h>
 #include <map>
 #include <deque>
 
+#define TIMEOUT 1.95
+
 // TODOs
 // TODO: Add time check to get_next_actions
 // TODO: Discuss fields reset with the team
+// TODO: Game can stuck if there is no unit and there is a building on every field
 
 // -----------------
 // Private functions
@@ -24,6 +28,7 @@ void Logic::check_buy(Buy& buy) {
 			if (map.is_farmable(current_field)) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
+				curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::FARM));
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -37,6 +42,7 @@ void Logic::check_buy(Buy& buy) {
 			if (current_field->type == Field::EMPTY || current_field->type == Field::GRAVE) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
+				curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::TOWER));
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -51,6 +57,7 @@ void Logic::check_buy(Buy& buy) {
 				|| current_field->type == Field::TOWER) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
+				curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::FORT) - Field::get_income(current_field->type));
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -71,13 +78,17 @@ void Logic::check_buy(Buy& buy) {
 
 					curr_buy.pos = current_field->pos;
 					curr_buy.value = 0;
-					int merged_type = type;
 
+					int merged_type = type;
 					int income = Field::get_income(merged_type);
+
 					if (current_field->type >= Field::PEASANT && current_field->type <= Field::KNIGHT) {
 						merged_type = Field::get_merged_type(type, current_field->type);
 						income = Field::get_income(merged_type) - Field::get_income(current_field->type);
 					}
+
+					curr_buy.value += get_economic_value(*current_field, cost, income);
+					curr_buy.value += get_offense_value(current_field, static_cast<Field::Type>(merged_type));
 
 					if (curr_buy.value > buy.value) buy = curr_buy;
 				}
@@ -124,7 +135,8 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			if (value.first->owner == infos.id) {
 				if (value.first->type <= Field::KNIGHT && value.first->type >= Field::PEASANT) {
 					// Merge check
-					if (Field::get_merged_type(unit->type, value.first->type) > -1)
+					if (unit == value.first) endpoints.push_back(value.first);
+					else if (Field::get_merged_type(unit->type, value.first->type) > -1)
 						endpoints.push_back(value.first);
 				}
 				else if (value.first->type == Field::GRAVE && value.first->type <= Field::PALM) {
@@ -196,7 +208,7 @@ void Logic::apply_buy(Buy& buy, std::vector<Field*>& moveable_units) {
 // Applies the decesion on the internal implementation caused by the move action
 void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 	Field& from_field = map.get_field(move.from_pos);
-	Field& to_field = map.get_field(move.from_pos);
+	Field& to_field = map.get_field(move.to_pos);
 
 	moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), &from_field));
 	// Movements in the empire
@@ -230,6 +242,63 @@ void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 	from_field.type = Field::EMPTY;
 }
 
+float Logic::get_economic_value(Field& field, int gold_mod, int income_mod) {
+	float goal_income = Constants::GOAL_INCOME_M * sqrtf(infos.tick);
+	float goal_gold = Constants::GOAL_GOLD_M * sqrtf(infos.tick);
+	float ret = 0;
+
+	if (field.type == Field::PINE) {
+		++income_mod;
+		gold_mod += 3;
+	}
+	else if (field.type == Field::PALM) {
+		++income_mod;
+		gold_mod += 6;
+	}
+
+	if (goal_income - map.income > 0) ret += (goal_income - map.income) * income_mod;
+	else ret += income_mod;
+
+	if (goal_gold - infos.gold > 0) ret += (goal_gold - infos.gold) * gold_mod;
+	else ret += income_mod;
+
+	return ret;
+}
+
+float Logic::get_offense_value(Field* field, Field::Type unit_type) {
+	std::map<Field*, int> visited;
+	std::deque<Field*> not_visited;
+	visited[field] = 0;
+	not_visited.push_back(field);
+
+	while (!not_visited.empty()) {
+		Field* current_field = not_visited.front();
+		not_visited.pop_front();
+
+		map.iterate_neighbours(*current_field, [unit_type, field, &visited, &not_visited, current_field, this](Field& neighbour) {
+			if (visited.find(&neighbour) == visited.end()) {
+				/* Can step on this field or can step through it */
+				if (!neighbour.water &&
+					((neighbour.owner == infos.id) || (Field::get_offense(unit_type) > map.get_defense(&neighbour))))
+				{
+					visited[&neighbour] = visited[current_field] + 1;
+					if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */
+						not_visited.push_back(&neighbour);
+				}
+			}
+			});
+	}
+	
+	int sum_value = 0;
+	for (const auto& value : visited) {
+		if (!(value.first->owner == infos.id)) {
+			sum_value += value.first->value;
+		}
+	}
+
+	return Constants::OFFENSE_VALUE_M * sum_value;
+}
+
 // ----------------
 // Public functions
 // ----------------
@@ -252,11 +321,18 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 			apply_buy(best_buy, moveable_units);
 		}
 		else if (best_move.value > Action::MIN_VALUE) {
-			result.push_back(best_move.str());
-			apply_move(best_move, moveable_units);
+			if (best_move.from_pos == best_move.to_pos)
+				moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), &map.get_field(best_move.to_pos)));
+			else {
+				result.push_back(best_move.str());
+				apply_move(best_move, moveable_units);
+			}
 		}
 		// If no reasonable decesion was found, then break loop
 		else break;
+
+		std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
+		if (process_seconds.count() > TIMEOUT) break;
 	}
 
 	map.reset();
@@ -276,34 +352,6 @@ void Logic::calculate_neighbouring_fields() {
 			if (current_field.owner != infos.id && !current_field.water) map.neighbouring_fields.insert(n_pos);
 			});
 	}
-}
-
-// TODO: Check defense only for own fields
-// TODO: Buy units only on lower defense fields
-float Logic::get_economic_value(std::pair<int, int> pos, int gold_mod, int income_mod) {
-	float goal_income = 5 * sqrtf(infos.tick);
-	float goal_gold = 10 * sqrtf(infos.tick);
-	float ret = 0;
-
-	Field& current_field = map.get_field(pos);
-	if (current_field.type == Field::PINE) {
-		++income_mod;
-		gold_mod += 3;
-	}
-	else if (current_field.type == Field::PALM) {
-		++income_mod;
-		gold_mod += 6;
-	}
-
-	// TODO: Tower
-
-	if (goal_income - map.income > 0) ret += (goal_income - map.income) * income_mod;
-	else ret += income_mod;
-
-	if (goal_gold - infos.gold > 0) ret += (goal_gold - infos.gold) * gold_mod;
-	else ret += income_mod;
-
-	return ret;
 }
 
 float Logic::get_threat_value(std::pair<int, int> pos, int self_defense) {

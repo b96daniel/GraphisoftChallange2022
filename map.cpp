@@ -128,9 +128,11 @@ int Map::get_cost(int field_type) {
 
 int Map::get_defense(Field* field) {
     int defense = field->get_defense();
-    iterate_neighbours(*field, [this, &defense](Field& neighbour) {
-        int n_defense = neighbour.get_defense();
-        if (defense < n_defense) defense = n_defense;
+    iterate_neighbours(*field, [field, this, &defense](Field& neighbour) {
+        if (neighbour.owner == field->owner) {
+            int n_defense = neighbour.get_defense();
+            if (defense < n_defense) defense = n_defense;
+        }
         });
     return defense;
 }
