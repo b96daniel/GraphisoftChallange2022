@@ -113,7 +113,8 @@ int Map::get_cost(int field_type) {
     case Field::FORT:
         return 35;
     case Field::PEASANT:
-        return std::max(2 + 4 * get_numof_peasants(), 10);
+        // return std::max(2 + 4 * get_numof_peasants(), 10);
+        return std::max(2 + 4 * static_cast<int>(units.size()), 10);
     case Field::SPEARMAN:
         return 20;
     case Field::SWORDSMAN:
@@ -135,7 +136,6 @@ int Map::get_defense(Field* field) {
 }
 
 /*
-
 void Map::process_loss(std::pair<int, int> pos) {
     auto it = std::find(farms.begin(), farms.end(), pos);
     if (it != farms.end()) {

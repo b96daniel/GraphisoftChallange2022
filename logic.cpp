@@ -107,11 +107,10 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			map.iterate_neighbours(*current_field, [unit, &visited, &not_visited, current_field, this](Field& neighbour) {
 				if (visited.find(&neighbour) == visited.end()) {
 					/* Can step on this field or can step through it */ 
-					// feltételek: nemvíz, nagyobb támadás mint védelem ha ellenség, saját egységen átléphet (saját épületen is?), merge itt nincs kezelve
-					if (!neighbour.water && (unit->get_offense() > neighbour.get_defense() || (neighbour.owner == infos.id)) )
+					if (!neighbour.water && 
+						((neighbour.owner == infos.id) || (unit->get_offense() > map.get_defense(&neighbour))))
 					{ 
 						visited[&neighbour] = visited[current_field] + 1;
-
 						if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */
 							not_visited.push_back(&neighbour);
 					}
@@ -139,20 +138,17 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			}			
 		}
 
-		// TODO: find the best endpoint
 		for (const auto& field_to : endpoints) {
-			if (field_to->owner != infos.id) {
-				current_move.value = 0;
-				current_move.to_pos = field_to->pos;
-				moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), unit));
-				return;
-			}
+			current_move.to_pos = field_to->pos;
+			current_move.value = 0;
+			if (field_to->owner != infos.id) current_move.value = 1;
+			if (current_move.value > move.value) move = current_move;
 		}
 	}
 }
 
 // Applies the decesion on the internal implementation caused by the buy action
-void Logic::apply_buy(Buy& buy) {
+void Logic::apply_buy(Buy& buy, std::vector<Field*>& moveable_units) {
 	Field& current_field = map.get_field(buy.pos);
 	infos.gold -= map.get_cost(buy.type);
 	map.income -= Field::get_income(current_field.type);
@@ -184,7 +180,10 @@ void Logic::apply_buy(Buy& buy) {
 		if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) {
 			new_type = Field::get_merged_type(buy.type, current_field.type);
 		}
-		else map.units.push_back(&current_field);
+		else {
+			map.units.push_back(&current_field);
+			moveable_units.push_back(&current_field);
+		}
 		map.income += Field::get_income(new_type);
 		current_field.type = static_cast<Field::Type>(new_type);
 		break;
@@ -195,8 +194,40 @@ void Logic::apply_buy(Buy& buy) {
 }
 
 // Applies the decesion on the internal implementation caused by the move action
-void Logic::apply_move(Move& move) {
+void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
+	Field& from_field = map.get_field(move.from_pos);
+	Field& to_field = map.get_field(move.from_pos);
 
+	moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), &from_field));
+	// Movements in the empire
+	if (to_field.owner == infos.id) {
+		map.income -= Field::get_income(to_field.type);
+		// Merge moves
+		if (from_field.type <= Field::KNIGHT && from_field.type >= Field::PEASANT) {
+			int merged_type = Field::get_merged_type(from_field.type, to_field.type);
+			map.income += Field::get_income(merged_type) - Field::get_income(from_field.type);
+			to_field.type = static_cast<Field::Type>(merged_type);
+			map.units.erase(std::find(map.units.begin(), map.units.end(), &from_field));
+		}
+
+		// Not merge moves
+		else {
+			to_field.type = from_field.type;
+			*std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
+		}
+	}
+
+	// Conquering moves
+	else {
+		*std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
+		to_field.owner = infos.id;
+		to_field.type = from_field.type;
+		map.own_fields.push_back(&to_field);
+		map.income += to_field.value;
+	}
+	if (to_field.type == Field::PALM) infos.gold += 6;
+	else if (to_field.type == Field::PINE) infos.gold += 3;
+	from_field.type = Field::EMPTY;
 }
 
 // ----------------
@@ -218,11 +249,11 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 		// Choose and apply best action
 		if (best_buy.value > best_move.value) {
 			result.push_back(best_buy.str());
-			apply_buy(best_buy);
+			apply_buy(best_buy, moveable_units);
 		}
 		else if (best_move.value > Action::MIN_VALUE) {
 			result.push_back(best_move.str());
-			apply_move(best_move);
+			apply_move(best_move, moveable_units);
 		}
 		// If no reasonable decesion was found, then break loop
 		else break;

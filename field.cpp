@@ -99,8 +99,6 @@ int Field::get_income(int type) {
     }
 };
 
-
-
 int Field::get_defense() {
     switch (type)
     {
@@ -155,11 +153,3 @@ int Field::get_offense() {
         return 0;
     }
 };
-
-
-/*
-bool Field::operator==(const Field& f) {
-    return pos == f.pos;
-}
-
-*/

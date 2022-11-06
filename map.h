@@ -40,7 +40,6 @@ public:
     std::set<std::pair<int, int>> neighbouring_fields;
     void process_loss(std::pair<int, int> pos);
     int& get_threat(std::pair<int, int> pos);
-
     void set_threat(std::pair<int, int> pos, int level);
     */
 };

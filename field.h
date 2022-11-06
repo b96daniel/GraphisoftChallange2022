@@ -38,10 +38,6 @@ public:
     static int get_income(int type);
     int get_defense();
     int get_offense();
-
-    /*
-    bool operator==(const Field& f);
-    */
 };
 
 #endif

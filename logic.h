@@ -14,8 +14,8 @@ class Logic {
 	// Private functions
 	void check_buy(Buy& buy);
 	void check_move(Move& move, std::vector<Field*>& moveable_units);
-	void apply_buy(Buy& buy);
-	void apply_move(Move& move);
+	void apply_buy(Buy& buy, std::vector<Field*>& moveable_units);
+	void apply_move(Move& move, std::vector<Field*>& moveable_units);
 public:
 	// Public variables
 	Map map;
