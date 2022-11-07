@@ -87,11 +87,11 @@ void Map::iterate_neighbours(Field& field, const std::function<void(Field&)>& fu
     if (r - 1 >= -infos.radius - std::min(0, q)) func(get_field({ q, r - 1}));
     if (r + 1 <= infos.radius - std::max(0, q)) func(get_field({ q, r + 1}));
 
-    if (q - 1 >= -infos.radius - std::min(0, r) &&
-        r + 1 <= infos.radius - std::max(0, q)) func(get_field({ q - 1, r + 1}));
+    if (q - 1 >= -infos.radius - std::min(0, r + 1) &&
+        r + 1 <= infos.radius - std::max(0, q - 1)) func(get_field({ q - 1, r + 1}));
        
-    if (q + 1 <= infos.radius - std::max(0, r) &&
-        r - 1 >= -infos.radius - std::min(0, q)) func(get_field({ q + 1, r - 1}));
+    if (q + 1 <= infos.radius - std::max(0, r - 1) &&
+        r - 1 >= -infos.radius - std::min(0, q + 1)) func(get_field({ q + 1, r - 1}));
 }
 
 int Map::get_numof_peasants()

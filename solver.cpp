@@ -60,6 +60,7 @@ std::vector<std::string> solver::processTick(const std::vector<std::string>& inf
 
 		// Handle each necessary info
 		if (substring == "REQ") {
+			std::cerr << info << std::endl;
 			for (int i = 0; i < 2; ++i) ss >> substring;
 			tick = std::stoi(substring);
 			id = get_next_int(ss, substring);

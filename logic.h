@@ -16,6 +16,7 @@ class Logic {
 	void check_move(Move& move, std::vector<Field*>& moveable_units);
 	void apply_buy(Buy& buy, std::vector<Field*>& moveable_units);
 	void apply_move(Move& move, std::vector<Field*>& moveable_units);
+	float get_income_goal();
 	float get_economic_value(Field& field, int gold_mod, int income_mod);
 	float get_offense_value(Field* field, Field::Type unit_type);
 public:
