@@ -1,4 +1,5 @@
 #include "field.h"
+#include <math.h>
 #include <string>
 
 // ----------------
@@ -157,3 +158,9 @@ int Field::get_offense(Type type) {
         return 0;
     }
 };
+
+int Field::distance(Field& field) {
+    return (abs(pos.first - field.pos.first)
+        + abs(pos.first + pos.second - field.pos.first - field.pos.second)
+        + abs(pos.second - field.pos.second)) / 2;
+}

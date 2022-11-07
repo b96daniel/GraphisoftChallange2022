@@ -1,6 +1,8 @@
 #ifndef INFOS_H
 #define INFOS_H
 
+#include "field.h"
+
 class Infos {
     Infos() {}
 
@@ -9,6 +11,7 @@ public:
     int radius{ -1 };
     int gold{ -1 };
     int tick{ -1 };
+    Field* castle;
 
     static Infos& get_instance()
     {

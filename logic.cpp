@@ -29,6 +29,7 @@ void Logic::check_buy(Buy& buy) {
 				curr_buy.pos = current_field->pos;
 				curr_buy.value = 0;
 				curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::FARM));
+				curr_buy.value -= static_cast<float>(current_field->distance(*infos.castle)) / infos.radius;
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}

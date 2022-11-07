@@ -40,6 +40,7 @@ public:
     int get_defense();
     static int get_offense(Type type);
     int get_offense();
+    int distance(Field& field);
 };
 
 #endif
