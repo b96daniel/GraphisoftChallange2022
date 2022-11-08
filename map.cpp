@@ -1,6 +1,42 @@
 #include "map.h"
+#include "constants.h"
 #include <algorithm>
 #include <array>
+#include <map>
+#include <deque>
+
+// -----------------
+// Private functions
+// -----------------
+
+void Map::set_threat(Field* field) {
+    constexpr int depth = Constants::THREAT_DEPTH;
+    std::map<Field*, int> visited;
+    std::deque<Field*> not_visited;
+    visited[field] = 0;
+    not_visited.push_back(field);
+
+    while (!not_visited.empty()) {
+        Field* current_field = not_visited.front();
+        not_visited.pop_front();
+
+        iterate_neighbours(*current_field, [&visited, &not_visited, current_field, this](Field& neighbour) {
+            if (visited.find(&neighbour) == visited.end()) {
+                /* Can step on this field or can step through it */
+                if (!neighbour.water)
+                {
+                    visited[&neighbour] = visited[current_field] + 1;
+                    if (visited[&neighbour] < depth) /* Can step further */
+                        not_visited.push_back(&neighbour);
+                }
+            }
+           });
+    }
+
+    for (const auto& element : visited) {
+        if (field->get_offense() > 0) ++element.first->threats[field->get_offense() - 1];
+    }
+}
 
 // ----------------
 // Public functions
@@ -23,6 +59,7 @@ void Map::reset() {
             fields[i][j].owner = -1;
             fields[i][j].type = Field::EMPTY;
             fields[i][j].detected = false;
+            fields[i][j].threats = {0, 0, 0, 0};
         }
     }
 
@@ -56,9 +93,7 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
         if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) units.push_back(&current_field);
         income += value + current_field.get_income(current_field.type);
     }
-    /*else if (current_type >= Field::PEASANT && current_type <= Field::KNIGHT) {
-        set_threat(current_field.pos, (current_type - Field::PEASANT) + 1);
-    };*/
+    else if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) set_threat(&current_field);
 }
 
 bool Map::is_farmable(Field* own_field)
@@ -148,57 +183,42 @@ bool Map::neighbours_detected(Field& field) {
     return ret;
 }
 
-int Map::get_tower_cover(Field* field)
+int Map::get_tower_cover(Field* field, Field::Type type)
 {
-    int ret;
-    if (get_defense(field) < Field::get_defense(Field::TOWER)) {
-        ret = 6;
-        iterate_neighbours(*field, [&ret, field, this](Field& neighbour) {
-            if (get_defense(&neighbour) >= Field::get_defense(Field::TOWER)) ret = 0; // --ret for grading
-        });
-    }
-    else {
-        ret = 0;
-    }
-    return ret;
+    float ret = 0;
+    if (get_defense(field) < Field::get_defense(type)) Field::get_defense(type) - get_defense(field);
+    iterate_neighbours(*field, [&ret, field, this, &type](Field& neighbour) {
+        if (get_defense(&neighbour) < Field::get_defense(type)) ret += Field::get_defense(type) - get_defense(&neighbour);
+    });
+   
+    return ret / 21;
 }
 
-/*
-void Map::process_loss(std::pair<int, int> pos) {
-    auto it = std::find(farms.begin(), farms.end(), pos);
-    if (it != farms.end()) {
-        farms.erase(it);
-        return;
+void Map::remove_threat(Field* field) {
+    constexpr int depth = Constants::THREAT_DEPTH;
+    std::map<Field*, int> visited;
+    std::deque<Field*> not_visited;
+    visited[field] = 0;
+    not_visited.push_back(field);
+
+    while (!not_visited.empty()) {
+        Field* current_field = not_visited.front();
+        not_visited.pop_front();
+
+        iterate_neighbours(*current_field, [&visited, &not_visited, current_field, this](Field& neighbour) {
+            if (visited.find(&neighbour) == visited.end()) {
+                /* Can step on this field or can step through it */
+                if (!neighbour.water)
+                {
+                    visited[&neighbour] = visited[current_field] + 1;
+                    if (visited[&neighbour] < depth) /* Can step further */
+                        not_visited.push_back(&neighbour);
+                }
+            }
+            });
     }
 
-    it = std::find(units.begin(), units.end(), pos);
-    if (it != units.end()) {
-        units.erase(it);
-        return;
-    }
-}
-
-void Map::set_threat(std::pair<int, int> pos, int level) {
-    constexpr int depth = 4;
-    std::array<std::set<std::pair<int, int>>, depth + 1> buffers;
-    buffers[0].insert(pos);
-
-    for (int i = 0; i < depth; ++i) {
-        for (const auto& surrounding : buffers[i]) {
-            iterate_neighbours(surrounding, [&i, &buffers](std::pair<int, int> s_pos) {buffers[i + 1].insert(s_pos);});
-        }
-    }
-
-    for (const auto& surrounding : buffers[depth]) {
-        int& threat_level = get_threat(surrounding);
-        if (threat_level < level) threat_level = level;
+    for (const auto& element : visited) {
+        if (field->get_offense() > 0) --element.first->threats[field->get_offense() - 1];
     }
 }
-
-int& Map::get_threat(std::pair<int, int> pos) {
-    return threat_levels[pos.first + infos.radius][pos.second + infos.radius];
-}
-*/
-
-
-

@@ -15,6 +15,9 @@ class Map {
     // Private variables
     Infos& infos{ Infos::get_instance() };
     std::vector<std::vector<Field>> fields;
+
+    // Private functions
+    void set_threat(Field* field);
     
 public:
     // Public variables
@@ -34,16 +37,8 @@ public:
     bool is_farmable(Field* field);
     int get_defense(Field* field);
     bool neighbours_detected(Field& field);
-    int get_tower_cover(Field* field);
-
-
-    /*  
-    std::vector<std::vector<int>> threat_levels;
-    std::set<std::pair<int, int>> neighbouring_fields;
-    void process_loss(std::pair<int, int> pos);
-    int& get_threat(std::pair<int, int> pos);
-    void set_threat(std::pair<int, int> pos, int level);
-    */
+    int get_tower_cover(Field* field, Field::Type type);
+    void remove_threat(Field* field);
 };
 
 #endif

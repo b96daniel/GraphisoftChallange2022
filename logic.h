@@ -19,6 +19,7 @@ class Logic {
 	float get_income_goal();
 	float get_economic_value(Field& field, int gold_mod, int income_mod);
 	float get_offense_value(Field* field, Field::Type unit_type);
+	float get_defense_value(Field* field, int self_defense);
 public:
 	// Public variables
 	Map map;
@@ -29,7 +30,6 @@ public:
 	/*
 	void calculate_neighbouring_fields();
 	float get_threat_value(std::pair<int, int> pos, int self_defense);
-	float get_defense_value(std::pair<int, int> pos, int self_defense);
 	*/
 };
 

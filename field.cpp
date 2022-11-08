@@ -168,3 +168,10 @@ int Field::distance(Field& field) {
         + abs(pos.first + pos.second - field.pos.first - field.pos.second)
         + abs(pos.second - field.pos.second)) / 2;
 }
+
+int Field::get_threat() {
+    for (int i = 3; i >= 0; --i) {
+        if (threats[i] > 0) return i + 1;
+    }
+    return 0;
+}

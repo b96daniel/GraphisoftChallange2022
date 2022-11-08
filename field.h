@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <string>
+#include <array>
 
 class Field {
 public:
@@ -28,6 +29,7 @@ public:
     int value{ 0 };
     int owner{ -1 };
     bool detected{ false };
+    std::array<int, 4> threats{0, 0, 0, 0};
     Type type{ EMPTY };
 
     // Public functions
@@ -42,6 +44,7 @@ public:
     static int get_offense(Type type);
     int get_offense();
     int distance(Field& field);
+    int get_threat();
 };
 
 #endif
