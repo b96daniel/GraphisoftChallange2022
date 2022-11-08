@@ -230,12 +230,13 @@ void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 	Field& from_field = map.get_field(move.from_pos);
 	Field& to_field = map.get_field(move.to_pos);
 
+	
 	moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), &from_field));
 	// Movements in the empire
 	if (to_field.owner == infos.id) {
 		map.income -= Field::get_income(to_field.type);
 		// Merge moves
-		if (from_field.type <= Field::KNIGHT && from_field.type >= Field::PEASANT) {
+		if (to_field.type <= Field::KNIGHT && to_field.type >= Field::PEASANT) {
 			int merged_type = Field::get_merged_type(from_field.type, to_field.type);
 			map.income += Field::get_income(merged_type) - Field::get_income(from_field.type);
 			to_field.type = static_cast<Field::Type>(merged_type);
@@ -245,18 +246,22 @@ void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 		// Not merge moves
 		else {
 			to_field.type = from_field.type;
-			*std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
+			map.units.erase(std::find(map.units.begin(), map.units.end(), &from_field));
+			map.units.push_back(&to_field);
+			// *std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
 		}
 	}
 
 	// Conquering moves
 	else {
-		*std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
 		if (to_field.type <= Field::KNIGHT && to_field.type >= Field::PEASANT) map.remove_threat(&to_field);
 		to_field.owner = infos.id;
 		to_field.type = from_field.type;
 		map.own_fields.push_back(&to_field);
 		map.income += to_field.value;
+		map.units.erase(std::find(map.units.begin(), map.units.end(), &from_field));
+		map.units.push_back(&to_field);
+		// *std::find(map.units.begin(), map.units.end(), &from_field) = &to_field;
 	}
 	if (to_field.type == Field::PALM) infos.gold += 6;
 	else if (to_field.type == Field::PINE) infos.gold += 3;
@@ -344,8 +349,6 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 	std::vector<std::string> result;
 	std::vector<Field*> moveable_units = map.units;
 
-	std::cerr << "Units: " << map.units.size() << "\n";
-
 	// Look for the next step while there is a reasonable one or until the limit is reached
 	while (static_cast<int>(result.size()) < 1024) {
 		Buy best_buy;
@@ -376,9 +379,11 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 
 	map.reset();
 
+	/*
 	std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
 	std::cerr << "[logic] Process took: " << process_seconds.count() << " seconds\n";
 	for (const auto& res : result) std::cerr << "[logic] Given command: " << res << "\n";
+	*/
 
 	return result;
 }
