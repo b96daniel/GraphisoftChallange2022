@@ -11,6 +11,7 @@
 // TODO: Add time check to get_next_actions
 // TODO: Discuss fields reset with the team
 // TODO: Game can stuck if there is no unit and there is a building on every field
+// TODO: Defense with move
 
 // -----------------
 // Private functions
@@ -98,7 +99,7 @@ void Logic::check_buy(Buy& buy) {
 						income = Field::get_income(merged_type) - Field::get_income(current_field->type);
 					}
 
-					if ((map.income + income) > get_income_goal()) {
+					if ((map.income + income) > 0 && map.income > get_income_goal()) {
 						curr_buy.value = 0;
 						curr_buy.value += get_economic_value(*current_field, -cost, income);
 						curr_buy.value += get_offense_value(current_field, static_cast<Field::Type>(merged_type));
@@ -156,7 +157,7 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 					if (unit == value.first) endpoints.push_back(value.first);
 					else if (Field::get_merged_type(unit->type, value.first->type) > -1) {
 						int income = Field::get_income(Field::get_merged_type(unit->type, value.first->type)) - Field::get_income(value.first->type);
-						if ((map.income + income) > get_income_goal()) endpoints.push_back(value.first);
+						if ((map.income + income) > 0 && map.income > get_income_goal()) endpoints.push_back(value.first);
 					}
 				}
 				else if (value.first->type == Field::GRAVE || value.first->type <= Field::PALM) {
@@ -173,7 +174,7 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 		for (const auto& field_to : endpoints) {
 			current_move.to_pos = field_to->pos;
 			current_move.value = 0;
-			if (field_to->owner != infos.id) current_move.value = 1;
+			current_move.value += get_move_offense_value(unit, field_to);
 			if (current_move.value > move.value) move = current_move;
 		}
 	}
@@ -327,7 +328,7 @@ float Logic::get_offense_value(Field* field, Field::Type unit_type) {
 		}
 	}
 
-	return Constants::OFFENSE_VALUE_M * sum_value;
+	return Constants::OFFENSE_VALUE_M * sum_value + static_cast<float>(field->distance(*infos.castle)) / infos.radius;
 }
 
 float Logic::get_defense_value(Field* field, int self_defense) {
@@ -339,6 +340,21 @@ float Logic::get_defense_value(Field* field, int self_defense) {
 		});
 
 	return Constants::DEFENSE_VALUE_M * deffed_fields;
+}
+
+float Logic::get_move_offense_value(Field* from_field, Field* to_field) {
+	if (to_field->owner != infos.id) {
+		float common_neighbours = 0;
+		map.iterate_neighbours(*from_field, [this, &common_neighbours](Field& f) {
+			if (f.owner == infos.id) ++common_neighbours;
+		});
+		return (common_neighbours
+			- (from_field->distance(*to_field) / (infos.radius * 10.0))
+			+ (static_cast<float>(to_field->get_score()) / 40.0)) * Constants::MOVE_OFFENSE_VALUE_M
+			+ get_economic_value(*to_field, 0, to_field->value);
+	}
+	
+	return 0;
 }
 
 // ----------------
@@ -379,29 +395,9 @@ std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time
 
 	map.reset();
 
-	/*
 	std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
 	std::cerr << "[logic] Process took: " << process_seconds.count() << " seconds\n";
 	for (const auto& res : result) std::cerr << "[logic] Given command: " << res << "\n";
-	*/
 
 	return result;
 }
-
-/*
-void Logic::calculate_neighbouring_fields() {
-	for (const auto& pos : map.own_fields) {
-		map.iterate_neighbours(pos, [this](std::pair<int, int> n_pos) {
-			Field& current_field = map.get_field(n_pos);
-			if (current_field.owner != infos.id && !current_field.water) map.neighbouring_fields.insert(n_pos);
-			});
-	}
-}
-
-float Logic::get_threat_value(std::pair<int, int> pos, int self_defense) {
-	int defense = map.get_defense(pos);
-	if (defense < self_defense) defense = self_defense;
-
-	return defense - map.get_threat(pos);
-}
-*/

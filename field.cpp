@@ -175,3 +175,31 @@ int Field::get_threat() {
     }
     return 0;
 }
+
+int Field::get_score() {
+    switch (type)
+    {
+    case EMPTY:
+    case GRAVE:
+    case CASTLE:
+    case PINE:
+    case PALM:
+        return 0;
+    case FARM:
+        return 12;
+    case TOWER:
+        return 15;
+    case FORT:
+        return 35;
+    case PEASANT:
+        return 10;
+    case SPEARMAN:
+        return 20;
+    case SWORDSMAN:
+        return 30;
+    case KNIGHT:
+        return 40;
+    default:
+        return 0;
+    }
+};

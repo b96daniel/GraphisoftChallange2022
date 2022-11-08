@@ -20,17 +20,13 @@ class Logic {
 	float get_economic_value(Field& field, int gold_mod, int income_mod);
 	float get_offense_value(Field* field, Field::Type unit_type);
 	float get_defense_value(Field* field, int self_defense);
+	float get_move_offense_value(Field* from_field, Field* to_field);
 public:
 	// Public variables
 	Map map;
 
 	// Public functions
 	std::vector<std::string> get_next_actions(std::chrono::steady_clock::time_point start);
-
-	/*
-	void calculate_neighbouring_fields();
-	float get_threat_value(std::pair<int, int> pos, int self_defense);
-	*/
 };
 
 #endif

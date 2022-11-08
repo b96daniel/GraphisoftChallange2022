@@ -45,6 +45,7 @@ public:
     int get_offense();
     int distance(Field& field);
     int get_threat();
+    int get_score();
 };
 
 #endif
