@@ -37,6 +37,7 @@ public:
     static std::string get_type_str(Type type);
     static int get_merged_type(int add_type, int base_type);
     static int get_income(int type);
+    static int get_defense(Type type);
     int get_defense();
     static int get_offense(Type type);
     int get_offense();

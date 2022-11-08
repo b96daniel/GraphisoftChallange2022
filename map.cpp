@@ -148,6 +148,21 @@ bool Map::neighbours_detected(Field& field) {
     return ret;
 }
 
+int Map::get_tower_cover(Field* field)
+{
+    int ret;
+    if (get_defense(field) < Field::get_defense(Field::TOWER)) {
+        ret = 6;
+        iterate_neighbours(*field, [&ret, field, this](Field& neighbour) {
+            if (get_defense(&neighbour) >= Field::get_defense(Field::TOWER)) ret = 0; // --ret for grading
+        });
+    }
+    else {
+        ret = 0;
+    }
+    return ret;
+}
+
 /*
 void Map::process_loss(std::pair<int, int> pos) {
     auto it = std::find(farms.begin(), farms.end(), pos);

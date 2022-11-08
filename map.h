@@ -34,6 +34,7 @@ public:
     bool is_farmable(Field* field);
     int get_defense(Field* field);
     bool neighbours_detected(Field& field);
+    int get_tower_cover(Field* field);
 
 
     /*  

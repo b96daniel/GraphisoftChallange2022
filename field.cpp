@@ -100,7 +100,7 @@ int Field::get_income(int type) {
     }
 };
 
-int Field::get_defense() {
+int Field::get_defense(Type type) {
     switch (type)
     {
     case EMPTY:
@@ -128,6 +128,10 @@ int Field::get_defense() {
     default:
         return 0;
     }
+};
+
+int Field::get_defense() {
+    return get_defense(type);
 };
 
 int Field::get_offense() {

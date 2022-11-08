@@ -44,7 +44,13 @@ void Logic::check_buy(Buy& buy) {
 				curr_buy.pos = current_field->pos;
 
 				curr_buy.value = 0;
-				curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::TOWER));
+				int tower_cover = map.get_tower_cover(current_field);
+				if (tower_cover) {
+					curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::TOWER));
+					curr_buy.value += tower_cover;
+				}
+				else
+					curr_buy.value = Action::MIN_VALUE;
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -58,9 +64,12 @@ void Logic::check_buy(Buy& buy) {
 			if (current_field->type == Field::EMPTY || current_field->type == Field::GRAVE 
 				|| current_field->type == Field::TOWER) {
 				curr_buy.pos = current_field->pos;
-				if ((map.income + (Field::get_income(Field::FORT) - Field::get_income(current_field->type))) > get_income_goal()) {
+				int tower_cover = map.get_tower_cover(current_field);
+				if ( ((map.income + (Field::get_income(Field::FORT) - Field::get_income(current_field->type))) > get_income_goal())
+					&& tower_cover ) {
 					curr_buy.value = 0;
 					curr_buy.value += get_economic_value(*current_field, cost, Field::get_income(Field::FORT) - Field::get_income(current_field->type));
+					curr_buy.value += tower_cover;
 				}
 				// Invalidate decision
 				else curr_buy.value = Action::MIN_VALUE;
