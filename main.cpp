@@ -23,7 +23,7 @@ class client {
             std::cerr << "[main] Failed to establish connection to the server" << std::endl;
             return;
         }
-        socket->send_messages({ "LOGIN " + team_name + " " + hash + " 9"});
+        socket->send_messages({ "LOGIN " + team_name + " " + hash + " 10"});
     }
 
    public:

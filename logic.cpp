@@ -4,6 +4,7 @@
 #include <math.h>
 #include <map>
 #include <deque>
+#include <algorithm>
 
 #define TIMEOUT 1.7
 
@@ -11,6 +12,9 @@
 // TODO: Plus point for merging into a moveable unit
 // TODO: Minus point for standing on the side of the empire
 // TODO: Maybe local decision worth it at larger maps
+// TODO: Minus point for standing on the border
+// TODO: Clustering
+// TODO: Trees
 
 // -----------------
 // Private functions
@@ -186,30 +190,108 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			}
 		}
 		else {
-			float local_point = Action::MIN_VALUE;
+			bool should_search = true;
 			for (const auto& field_to : endpoints) {
 				current_move.to_pos = field_to->pos;
 				current_move.value = 0;
 				current_move.value += get_inline_move_value(unit, field_to);
 				current_move.value += get_economic_value(*field_to, 0, 0);
 				if (current_move.value > move.value) move = current_move;
-				if (local_point < current_move.value) local_point = current_move.value;
+				
+				should_search &= (current_move.value == 0);
 			}
 
-			if (local_point == 0) {
-				Field* dangerours_field = nullptr;
-				int max_diff = 0;
+			if (should_search) {
+				Field* dangerours_field = unit;
+				int max_diff = std::max(unit->get_threat() - map.get_defense(unit), 0);
+				int max_threat = unit->get_threat();
 				int diff;
 				for (const auto& f : map.own_fields) {
 					diff = f->get_threat() - map.get_defense(f);
-					if (diff > max_diff) {
+					if (max_diff == 0) {
+						if (f->get_threat() > max_threat) {
+							max_threat = f->get_threat();
+							dangerours_field = f;
+						}
+					}
+					else if (diff > max_diff) {
 						max_diff = diff;
 						dangerours_field = f;
 					}
+
 				}
-				if (max_diff > 0) {
-					// TODO: A*
+
+				std::map<Field*, int> open;
+				std::map<Field*, int> closed;
+				closed[unit] = 0;
+				bool goal_found = false;
+				map.iterate_neighbours(*unit, [&open, this, dangerours_field, &goal_found, &unit, &closed](Field& n) {
+					if (!goal_found) {
+						if (n.owner == infos.id) {
+							if (&n == dangerours_field) {
+								goal_found = true;
+								closed[&n] = 1;
+							}
+							else open[&n] = 1;
+						}
+					}
+					});
+
+				while (!open.empty() && !goal_found) {
+					Field* current_field = std::min_element(open.begin(), open.end(),
+						[&dangerours_field](const auto& a, const auto& b) {
+							return a.first->distance(*dangerours_field) + a.second < b.first->distance(*dangerours_field) + b.second;
+						})->first;
+
+					map.iterate_neighbours(*current_field, [&open, &closed, this, dangerours_field, &goal_found, current_field](Field& n) {
+						if (!goal_found) {
+							if (n.owner == infos.id) {
+								if (&n == dangerours_field) {
+									goal_found = true;
+									closed[&n] = open[current_field] + 1;
+								}
+								else {
+									if ((open.find(&n) == open.end() || open[&n] > (1 + open[current_field]))
+										&& (closed.find(&n) == closed.end() || closed[&n] > (1 + open[current_field]))) {
+										open[&n] = 1 + open[current_field];
+									}
+								}
+							}
+						}
+						});
+
+					closed[current_field] = open[current_field];
+					open.erase(current_field);
 				}
+
+				std::vector<Field*> path;
+				if (goal_found) {
+					Field* current_node = dangerours_field;
+					path.push_back(current_node);
+					while (current_node != unit) {
+						map.iterate_neighbours(*current_node, [&current_node, &closed, dangerours_field](Field& n) {
+							if (closed.find(&n) != closed.end() && closed[&n] == (closed[current_node] - 1)) {
+								current_node = &n;
+							}
+							});
+						path.push_back(current_node);
+					}
+
+					current_move.to_pos = unit->pos;
+					for (const auto& element : path) {
+						if (std::find(endpoints.begin(), endpoints.end(), element) != endpoints.end()) {
+							current_move.to_pos = element->pos;
+							break;
+						}
+					}
+
+					current_move.value = 0.1;
+				}
+				else {
+					current_move.value = 0.1;
+					current_move.to_pos = unit->pos;
+				}
+				if (current_move.value > move.value) move = current_move;
 			}
 		}
 	}
@@ -308,7 +390,8 @@ float Logic::get_income_goal() {
 	return Constants::GOAL_INCOME_M * sqrtf(infos.tick);
 }
 
-float Logic::get_economic_value(Field& field, int gold_mod, int income_mod) {
+float Logic::
+get_economic_value(Field& field, int gold_mod, int income_mod) {
 	float goal_income = get_income_goal();
 	// float goal_gold = Constants::GOAL_GOLD_M * sqrtf(infos.tick);
 	float ret = 0;
@@ -370,8 +453,10 @@ float Logic::get_defense_value(Field* field, int self_defense) {
 	int deffed_fields = 0;
 	if (self_defense >= field->get_threat() && map.get_defense(field) < field->get_threat()) ++deffed_fields;
 	map.iterate_neighbours(*field, [this, &self_defense, &deffed_fields](Field& f) {
-		int n_defense = map.get_defense(&f);
-		if (self_defense >= f.get_threat() && n_defense < f.get_threat()) ++deffed_fields;
+		if (f.owner == infos.id) {
+			int n_defense = map.get_defense(&f);
+			if (self_defense >= f.get_threat() && n_defense < f.get_threat()) ++deffed_fields;
+		}
 		});
 
 	return Constants::DEFENSE_VALUE_M * deffed_fields;
@@ -397,22 +482,23 @@ float Logic::get_inline_move_value(Field* from_field, Field* to_field) {
 		int from_prev_defended = 0;
 		if (map.is_defended(from_field)) ++from_prev_defended;
 		map.iterate_neighbours(*from_field, [this, &from_prev_defended](Field& neighbour) {
-			if (map.is_defended(&neighbour)) ++from_prev_defended;
+			if (neighbour.owner == infos.id && map.is_defended(&neighbour)) ++from_prev_defended;
 			});
 
 		// Check number of defended fields after move at from_pos
 		int from_next_defended = 0;
 		bool is_defended = false;
 		map.iterate_neighbours(*from_field, [from_field, this, &is_defended, &from_next_defended](Field& neighbour) {
-			is_defended |= (neighbour.get_defense() >= from_field->get_threat());
-
-			bool is_n_defended = (neighbour.get_defense() >= neighbour.get_threat());
-			map.iterate_neighbours(neighbour, [from_field, &is_n_defended, &neighbour](Field& n) {
-				if (&n != from_field) {
-					is_n_defended |= (n.get_defense() >= neighbour.get_threat());
-				}
-				});
-			if (is_n_defended) ++from_next_defended;
+			if (neighbour.owner == infos.id) {
+				is_defended |= (neighbour.get_defense() >= from_field->get_threat());
+				bool is_n_defended = (neighbour.get_defense() >= neighbour.get_threat());
+				map.iterate_neighbours(neighbour, [this, from_field, &is_n_defended, &neighbour](Field& n) {
+					if (&n != from_field) {
+						is_n_defended |= (n.owner == infos.id && n.get_defense() >= neighbour.get_threat());
+					}
+					});
+				if (is_n_defended) ++from_next_defended;
+			}
 			});
 		if (is_defended) ++from_next_defended;
 
@@ -424,7 +510,8 @@ float Logic::get_inline_move_value(Field* from_field, Field* to_field) {
 
 		if ((map.get_defense(to_field) < to_field->get_threat()) && (to_field->get_threat() <= Field::get_defense(new_type))) ++to_defense_change;
 		map.iterate_neighbours(*to_field, [this, &new_type, &to_defense_change](Field& neighbour) {
-			if ((map.get_defense(&neighbour) < neighbour.get_threat()) && (neighbour.get_threat() <= Field::get_defense(new_type)))
+			if (neighbour.owner == infos.id
+				&& (map.get_defense(&neighbour) < neighbour.get_threat()) && (neighbour.get_threat() <= Field::get_defense(new_type)))
 				++to_defense_change;
 			});
 
