@@ -8,12 +8,9 @@
 #define TIMEOUT 1.7
 
 // TODOs
-// TODO: Add time check to get_next_actions
-// TODO: Discuss fields reset with the team
-// TODO: Game can stuck if there is no unit and there is a building on every field
-// TODO: Defense with move
 // TODO: Plus point for merging into a moveable unit
 // TODO: Minus point for standing on the side of the empire
+// TODO: Maybe local decision worth it at larger maps
 
 // -----------------
 // Private functions
@@ -189,11 +186,30 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			}
 		}
 		else {
+			float local_point = Action::MIN_VALUE;
 			for (const auto& field_to : endpoints) {
 				current_move.to_pos = field_to->pos;
 				current_move.value = 0;
 				current_move.value += get_inline_move_value(unit, field_to);
+				current_move.value += get_economic_value(*field_to, 0, 0);
 				if (current_move.value > move.value) move = current_move;
+				if (local_point < current_move.value) local_point = current_move.value;
+			}
+
+			if (local_point == 0) {
+				Field* dangerours_field = nullptr;
+				int max_diff = 0;
+				int diff;
+				for (const auto& f : map.own_fields) {
+					diff = f->get_threat() - map.get_defense(f);
+					if (diff > max_diff) {
+						max_diff = diff;
+						dangerours_field = f;
+					}
+				}
+				if (max_diff > 0) {
+					// TODO: A*
+				}
 			}
 		}
 	}
