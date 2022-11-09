@@ -29,7 +29,7 @@ public:
     int value{ 0 };
     int owner{ -1 };
     bool detected{ false };
-    std::array<int, 4> threats{0, 0, 0, 0};
+    std::array<int, 5> threats{0, 0, 0, 0, 0};
     Type type{ EMPTY };
 
     // Public functions

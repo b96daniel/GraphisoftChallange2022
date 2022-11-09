@@ -36,6 +36,7 @@ void Map::set_threat(Field* field) {
     for (const auto& element : visited) {
         if (field->get_offense() > 0) ++element.first->threats[field->get_offense() - 1];
         else if (field->type == Field::CASTLE) ++element.first->threats[Constants::CASTLE_THREAT - 1];
+        else ++element.first->threats[0];
     }
 }
 
@@ -94,8 +95,7 @@ void Map::set_field(std::pair<int, int> pos, int value, int owner, std::string& 
         if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) units.push_back(&current_field);
         income += value + current_field.get_income(current_field.type);
     }
-    else if (current_field.type >= Field::PEASANT && current_field.type <= Field::KNIGHT) set_threat(&current_field);
-    else if (current_field.type == Field::CASTLE) set_threat(&current_field);
+    else if (owner != -1) set_threat(&current_field);
 }
 
 bool Map::is_farmable(Field* own_field)
@@ -226,5 +226,6 @@ void Map::remove_threat(Field* field) {
 
     for (const auto& element : visited) {
         if (field->get_offense() > 0) --element.first->threats[field->get_offense() - 1];
+        else if (field->owner != -1) --element.first->threats[0];
     }
 }

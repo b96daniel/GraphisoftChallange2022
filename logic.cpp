@@ -104,6 +104,7 @@ void Logic::check_buy(Buy& buy) {
 
 					float defense_value = get_defense_value(current_field, Field::get_offense(static_cast<Field::Type>(merged_type)));
 					float offense_value = get_offense_value(current_field, static_cast<Field::Type>(merged_type));
+					//float offense_value = 0;
 					if ((map.income + income) > 0 && map.income > get_income_goal() && (defense_value > 0 || offense_value > 0)) {
 						curr_buy.value = 0;
 						curr_buy.value += get_economic_value(*current_field, -cost, income);
@@ -185,6 +186,7 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 				current_move.value += get_move_offense_value(unit, field_to);
 				if (current_move.value > move.value) move = current_move;
 			}
+			return;
 		}
 		else {
 			bool should_search = true;
@@ -204,6 +206,10 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 				int max_threat = unit->get_threat();
 				int diff;
 				for (const auto& f : map.own_fields) {
+					if (f->type == Field::PALM || f->type == Field::PINE) {
+						dangerours_field = f;
+						break;
+					}
 					diff = f->get_threat() - map.get_defense(f);
 					if (max_diff == 0) {
 						if (f->get_threat() > max_threat) {
@@ -215,9 +221,7 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 						max_diff = diff;
 						dangerours_field = f;
 					}
-
 				}
-
 				std::map<Field*, int> open;
 				std::map<Field*, int> closed;
 				closed[unit] = 0;
@@ -288,8 +292,11 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 					current_move.value = 0.1;
 					current_move.to_pos = unit->pos;
 				}
-				if (current_move.value > move.value) move = current_move;
+				current_move.value = 0.1;
+				move = current_move;
+				return;
 			}
+			else return;
 		}
 	}
 }
@@ -369,7 +376,7 @@ void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 
 	// Conquering moves
 	else {
-		if (to_field.type <= Field::KNIGHT && to_field.type >= Field::PEASANT) map.remove_threat(&to_field);
+		map.remove_threat(&to_field);
 		to_field.owner = infos.id;
 		to_field.type = from_field.type;
 		map.own_fields.push_back(&to_field);
@@ -387,8 +394,7 @@ float Logic::get_income_goal() {
 	return Constants::GOAL_INCOME_M * (sqrtf(infos.tick) - 1);
 }
 
-float Logic::
-get_economic_value(Field& field, int gold_mod, int income_mod) {
+float Logic::get_economic_value(Field& field, int gold_mod, int income_mod) {
 	float goal_income = get_income_goal();
 	// float goal_gold = Constants::GOAL_GOLD_M * sqrtf(infos.tick);
 	float ret = 0;
@@ -429,7 +435,7 @@ float Logic::get_offense_value(Field* field, Field::Type unit_type) {
 					((neighbour.owner == infos.id) || (Field::get_offense(unit_type) > map.get_defense(&neighbour))))
 				{
 					visited[&neighbour] = visited[current_field] + 1;
-					if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) /* Can step further */
+					if ((visited[&neighbour] < 2) && (neighbour.owner == infos.id)) /* Can step further */
 						not_visited.push_back(&neighbour);
 				}
 			}
@@ -447,7 +453,7 @@ float Logic::get_offense_value(Field* field, Field::Type unit_type) {
 }
 
 float Logic::get_defense_value(Field* field, int self_defense) {
-	int deffed_fields = 0;
+	float deffed_fields = 0;
 	if (self_defense >= field->get_threat() && map.get_defense(field) < field->get_threat()) ++deffed_fields;
 	map.iterate_neighbours(*field, [this, &self_defense, &deffed_fields](Field& f) {
 		if (f.owner == infos.id) {
@@ -466,9 +472,9 @@ float Logic::get_move_offense_value(Field* from_field, Field* to_field) {
 			if (f.owner == infos.id) ++common_neighbours;
 		});
 		return (common_neighbours
-			- (from_field->distance(*to_field) / (infos.radius * 10.0))
-			+ (static_cast<float>(to_field->get_score()) / 40.0)) * Constants::MOVE_OFFENSE_VALUE_M
-			+ get_economic_value(*to_field, 0, to_field->value);
+			- (to_field->distance(*infos.castle) / (infos.radius * 10.0))
+			+ (static_cast<float>(to_field->get_score()) / 20.0)) * Constants::MOVE_OFFENSE_VALUE_M
+			+ get_economic_value(*to_field, 0, to_field->value) / 6;
 	}
 	return 0;
 }
@@ -515,6 +521,10 @@ float Logic::get_inline_move_value(Field* from_field, Field* to_field) {
 		ret = to_defense_change + from_next_defended - from_prev_defended;
 	}
 	
+	map.iterate_neighbours(*to_field, [this, &ret](Field& f) {
+		if (f.owner != -1 && f.owner != infos.id) ret -= 10;
+	});
+
 	/*
 	std::map<Field*, int> visited;
 	std::deque<Field*> not_visited;
@@ -563,15 +573,52 @@ float Logic::get_inline_move_value(Field* from_field, Field* to_field) {
 std::vector<std::string> Logic::get_next_actions(std::chrono::steady_clock::time_point start) {
 	std::vector<std::string> result;
 	std::vector<Field*> moveable_units = map.units;
+	bool try_buy = true;
 
 	// Look for the next step while there is a reasonable one or until the limit is reached
 	while (static_cast<int>(result.size()) < 1024) {
+		/*
 		Buy best_buy;
-		Move best_move;
+		do {
+			best_buy.value = Action::MIN_VALUE;
+			check_buy(best_buy);
+			if (best_buy.value > Action::MIN_VALUE) {
+				result.push_back(best_buy.str());
+				apply_buy(best_buy, moveable_units);
+			}
+			std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
+			if (process_seconds.count() > TIMEOUT) break;
+		} while (best_buy.value > Action::MIN_VALUE && static_cast<int>(result.size()));
 
-		check_buy(best_buy);
+		Move best_move;
+		bool changed = false;
+		do {
+			best_move.value = Action::MIN_VALUE;
+			check_move(best_move, moveable_units);
+			if (best_move.value > Action::MIN_VALUE) {
+				if (best_move.from_pos == best_move.to_pos)
+					moveable_units.erase(std::find(moveable_units.begin(), moveable_units.end(), &map.get_field(best_move.to_pos)));
+				else {
+					changed = true;
+					result.push_back(best_move.str());
+					apply_move(best_move, moveable_units);
+				}
+			}
+			std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
+			if (process_seconds.count() > TIMEOUT) break;
+		} while (best_move.value > Action::MIN_VALUE && static_cast<int>(result.size()));
+
+		std::chrono::duration<double> process_seconds = std::chrono::steady_clock::now() - start;
+		if (process_seconds.count() > TIMEOUT) break;
+		if (!changed) break;
+		*/
+
+		Move best_move;
+		Buy best_buy;
+		if (try_buy) check_buy(best_buy);
 		check_move(best_move, moveable_units);
 
+		if (best_buy.value == Action::MIN_VALUE) try_buy = false;
 		// Choose and apply best action
 		if (best_buy.value > best_move.value) {
 			result.push_back(best_buy.str());

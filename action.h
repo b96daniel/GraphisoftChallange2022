@@ -10,6 +10,7 @@ class Action {
     public:
         // Public variables
         static constexpr float MIN_VALUE = -1000000000.0;
+        static constexpr float MAX_VALUE = 1000000000.0;
         float value = MIN_VALUE;
 
         // Public functions
