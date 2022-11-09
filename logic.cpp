@@ -10,8 +10,6 @@
 
 // TODOs
 // TODO: Plus point for merging into a moveable unit
-// TODO: Minus point for standing on the side of the empire
-// TODO: Maybe local decision worth it at larger maps
 // TODO: Minus point for standing on the border
 // TODO: Clustering
 // TODO: Trees
@@ -37,7 +35,6 @@ void Logic::check_buy(Buy& buy) {
 				map.iterate_neighbours(*current_field, [&curr_buy](Field& n) {
 					if ((n.type >= Field::CASTLE && n.type <= Field::FORT) || n.water) curr_buy.value -= 0.1;
 					});
-
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
 		}
@@ -387,7 +384,7 @@ void Logic::apply_move(Move& move, std::vector<Field*>& moveable_units) {
 }
 
 float Logic::get_income_goal() {
-	return Constants::GOAL_INCOME_M * sqrtf(infos.tick);
+	return Constants::GOAL_INCOME_M * (sqrtf(infos.tick) - 1);
 }
 
 float Logic::
