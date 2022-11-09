@@ -8,6 +8,7 @@ namespace Constants {
 	inline constexpr float MOVE_OFFENSE_VALUE_M = 10;
 
 	inline constexpr int THREAT_DEPTH = 2;
+	inline constexpr int CASTLE_THREAT = 3;
 }
 
 #endif

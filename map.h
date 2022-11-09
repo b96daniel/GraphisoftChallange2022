@@ -38,6 +38,7 @@ public:
     int get_defense(Field* field);
     bool neighbours_detected(Field& field);
     int get_tower_cover(Field* field, Field::Type type);
+    bool is_defended(Field* f);
     void remove_threat(Field* field);
 };
 

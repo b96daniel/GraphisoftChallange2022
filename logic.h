@@ -21,6 +21,8 @@ class Logic {
 	float get_offense_value(Field* field, Field::Type unit_type);
 	float get_defense_value(Field* field, int self_defense);
 	float get_move_offense_value(Field* from_field, Field* to_field);
+	float get_move_defense_value(Field* from_field, Field* to_field);
+	float get_inline_move_value(Field* from_field, Field* to_field);
 public:
 	// Public variables
 	Map map;

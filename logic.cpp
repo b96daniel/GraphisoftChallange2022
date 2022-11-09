@@ -12,6 +12,8 @@
 // TODO: Discuss fields reset with the team
 // TODO: Game can stuck if there is no unit and there is a building on every field
 // TODO: Defense with move
+// TODO: Plus point for merging into a moveable unit
+// TODO: Minus point for standing on the side of the empire
 
 // -----------------
 // Private functions
@@ -31,6 +33,9 @@ void Logic::check_buy(Buy& buy) {
 				curr_buy.value = 0;
 				curr_buy.value += get_economic_value(*current_field, -cost, Field::get_income(Field::FARM));
 				curr_buy.value -= static_cast<float>(current_field->distance(*infos.castle)) / infos.radius;
+				map.iterate_neighbours(*current_field, [&curr_buy](Field& n) {
+					if ((n.type >= Field::CASTLE && n.type <= Field::FORT) || n.water) curr_buy.value -= 0.1;
+					});
 
 				if (curr_buy.value > buy.value) buy = curr_buy;
 			}
@@ -99,11 +104,14 @@ void Logic::check_buy(Buy& buy) {
 						income = Field::get_income(merged_type) - Field::get_income(current_field->type);
 					}
 
-					if ((map.income + income) > 0 && map.income > get_income_goal()) {
+					float defense_value = get_defense_value(current_field, Field::get_offense(static_cast<Field::Type>(merged_type)));
+					float offense_value = get_offense_value(current_field, static_cast<Field::Type>(merged_type));
+					if ((map.income + income) > 0 && map.income > get_income_goal() && (defense_value > 0 || offense_value > 0)) {
 						curr_buy.value = 0;
 						curr_buy.value += get_economic_value(*current_field, -cost, income);
-						curr_buy.value += get_offense_value(current_field, static_cast<Field::Type>(merged_type));
-						curr_buy.value += get_defense_value(current_field, Field::get_offense(static_cast<Field::Type>(merged_type)));
+						curr_buy.value += offense_value;
+						curr_buy.value += defense_value;
+						curr_buy.value += static_cast<float>(current_field->distance(*infos.castle)) / infos.radius;
 					}
 					// Invalidate decision
 					else curr_buy.value = Action::MIN_VALUE;
@@ -150,6 +158,7 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 
 		// Possible endpoints for movement
 		std::vector<Field*> endpoints;
+		std::vector<Field*> enemy_endpoints;
 		for (const auto& value : visited) {
 			if (value.first->owner == infos.id) {
 				if (value.first->type <= Field::KNIGHT && value.first->type >= Field::PEASANT) {
@@ -167,15 +176,25 @@ void Logic::check_move(Move& move, std::vector<Field*>& moveable_units) {
 			}
 			else {
 				// else enemy - already checked we have enough offense
-				endpoints.push_back(value.first);
+				enemy_endpoints.push_back(value.first);
 			}			
 		}
 
-		for (const auto& field_to : endpoints) {
-			current_move.to_pos = field_to->pos;
-			current_move.value = 0;
-			current_move.value += get_move_offense_value(unit, field_to);
-			if (current_move.value > move.value) move = current_move;
+		if (!enemy_endpoints.empty()) {
+			for (const auto& field_to : enemy_endpoints) {
+				current_move.to_pos = field_to->pos;
+				current_move.value = 0;
+				current_move.value += get_move_offense_value(unit, field_to);
+				if (current_move.value > move.value) move = current_move;
+			}
+		}
+		else {
+			for (const auto& field_to : endpoints) {
+				current_move.to_pos = field_to->pos;
+				current_move.value = 0;
+				current_move.value += get_inline_move_value(unit, field_to);
+				if (current_move.value > move.value) move = current_move;
+			}
 		}
 	}
 }
@@ -328,7 +347,7 @@ float Logic::get_offense_value(Field* field, Field::Type unit_type) {
 		}
 	}
 
-	return Constants::OFFENSE_VALUE_M * sum_value + static_cast<float>(field->distance(*infos.castle)) / infos.radius;
+	return Constants::OFFENSE_VALUE_M * sum_value;
 }
 
 float Logic::get_defense_value(Field* field, int self_defense) {
@@ -353,9 +372,89 @@ float Logic::get_move_offense_value(Field* from_field, Field* to_field) {
 			+ (static_cast<float>(to_field->get_score()) / 40.0)) * Constants::MOVE_OFFENSE_VALUE_M
 			+ get_economic_value(*to_field, 0, to_field->value);
 	}
-	
 	return 0;
 }
+
+float Logic::get_inline_move_value(Field* from_field, Field* to_field) {
+	float ret = 0;
+	if (from_field != to_field) {
+		int from_prev_defended = 0;
+		if (map.is_defended(from_field)) ++from_prev_defended;
+		map.iterate_neighbours(*from_field, [this, &from_prev_defended](Field& neighbour) {
+			if (map.is_defended(&neighbour)) ++from_prev_defended;
+			});
+
+		// Check number of defended fields after move at from_pos
+		int from_next_defended = 0;
+		bool is_defended = false;
+		map.iterate_neighbours(*from_field, [from_field, this, &is_defended, &from_next_defended](Field& neighbour) {
+			is_defended |= (neighbour.get_defense() >= from_field->get_threat());
+
+			bool is_n_defended = (neighbour.get_defense() >= neighbour.get_threat());
+			map.iterate_neighbours(neighbour, [from_field, &is_n_defended, &neighbour](Field& n) {
+				if (&n != from_field) {
+					is_n_defended |= (n.get_defense() >= neighbour.get_threat());
+				}
+				});
+			if (is_n_defended) ++from_next_defended;
+			});
+		if (is_defended) ++from_next_defended;
+
+		// Check number of defended field after move at to_pos
+		float to_defense_change = 0;
+		Field::Type new_type = from_field->type;
+		if (Field::get_merged_type(from_field->type, to_field->type) > -1)
+			new_type = static_cast<Field::Type>(Field::get_merged_type(from_field->type, to_field->type));
+
+		if ((map.get_defense(to_field) < to_field->get_threat()) && (to_field->get_threat() <= Field::get_defense(new_type))) ++to_defense_change;
+		map.iterate_neighbours(*to_field, [this, &new_type, &to_defense_change](Field& neighbour) {
+			if ((map.get_defense(&neighbour) < neighbour.get_threat()) && (neighbour.get_threat() <= Field::get_defense(new_type)))
+				++to_defense_change;
+			});
+
+		ret = to_defense_change + from_next_defended - from_prev_defended;
+	}
+	
+	/*
+	std::map<Field*, int> visited;
+	std::deque<Field*> not_visited;
+	visited[to_field] = 0;
+	not_visited.push_back(to_field);
+
+	Field::Type new_type = from_field->type;
+	if (Field::get_merged_type(from_field->type, to_field->type) > -1)
+		new_type = static_cast<Field::Type>(Field::get_merged_type(from_field->type, to_field->type));
+
+	while (!not_visited.empty()) {
+		Field* current_field = not_visited.front();
+		not_visited.pop_front();
+
+		map.iterate_neighbours(*current_field, [from_field, to_field, &visited, &not_visited, current_field, this, &new_type](Field& neighbour) {
+			if (visited.find(&neighbour) == visited.end()) {
+				// Can step on this field or can step through it
+				if (!neighbour.water &&
+					((neighbour.owner == infos.id) || (Field::get_offense(new_type) > map.get_defense(&neighbour))))
+				{
+					visited[&neighbour] = visited[current_field] + 1;
+					if ((visited[&neighbour] < 4) && (neighbour.owner == infos.id)) // Can step further
+						not_visited.push_back(&neighbour);
+				}
+			}
+			});
+	}
+
+	int sum_value = 0;
+	for (const auto& value : visited) {
+		if (!(value.first->owner == infos.id)) {
+			sum_value += value.first->value;
+		}
+	}
+	ret += sum_value;
+	*/
+
+	return ret;
+}
+
 
 // ----------------
 // Public functions
